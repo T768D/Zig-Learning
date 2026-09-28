@@ -52,6 +52,9 @@ pub fn main() !void {
 	clearConsole();
 	try readSaved();
 
+	const stdin = std.Io.File.stdin();
+	reader = stdin.readerStreaming(IO, &inputBuffer);
+
 	while (true) {
 		const input = awaitInput();
 		try parseInput(input);
@@ -80,9 +83,6 @@ fn clearConsole() void {
 fn awaitInput() []const u8 {
 
 	std.debug.print("\n>",.{});
-	const stdin = std.Io.File.stdin();
-	var inputBuffer: [2048]u8 = undefined;
-	var reader = stdin.readerStreaming(IO, &inputBuffer);
 
 	// this waits until \n is streamed into the buffer then executes, is blocking
 	const input = reader.interface.takeDelimiterExclusive('\n') catch |err| {
@@ -100,6 +100,7 @@ fn sortAssit(_: void, A: FileStructure, B: FileStructure) bool {
 
 
 fn parseInput(str: []const u8) !void {
+
 	if (std.mem.eql(u8, str, "add")) {
 		var appendingData: FileStructure = .{
 			.title = "",
@@ -187,8 +188,8 @@ fn readSaved() !void {
 		else =>	return err
 	};
 
-	var reader = file.reader(IO, &.{});
-	const fileContents = reader.interface.allocRemaining(
+	var fileReader = file.reader(IO, &.{});
+	const fileContents = fileReader.interface.allocRemaining(
 		std.heap.smp_allocator,
 		.unlimited,
 	) catch |err| {
