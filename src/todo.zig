@@ -120,7 +120,7 @@ fn parseInput(str: []const u8) !void {
 			};
 
 			appendingData.priority = convertedInt;
-			appendingData.title = priority;
+			appendingData.title = title;
 			break;
 		}
 
@@ -134,10 +134,10 @@ fn parseInput(str: []const u8) !void {
 	else if (std.mem.startsWith(u8,str, "delete")) {
 		const title = str[7..str.len];
 		if (savedData.remove(title)) {
-			std.debug.print("No todo with the name {s} exists", .{title});
+			std.debug.print("Removed {s} from the todo",.{title});
 		}
 		else {
-			std.debug.print("Removed {s} from the todo",.{title});
+			std.debug.print("No todo with the name {s} exists", .{title});
 		}
 	}
 
@@ -150,7 +150,6 @@ fn parseInput(str: []const u8) !void {
 		}
 
 		std.mem.sort(FileStructure,order.items,{}, sortAssit);
-	
 	
 		for (order.items) |item| {
 			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
