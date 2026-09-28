@@ -142,7 +142,16 @@ fn parseInput(str: []const u8) !void {
 	}
 
 	else if (std.mem.startsWith(u8,str, "delete")) {
-		const title = str[7..str.len];
+		var title: []const u8 = undefined;
+
+		if (str.len <= 6) {
+			std.debug.print("Input title", .{});
+			title = awaitInput();
+		}
+		else {
+			title = str[7..str.len];
+		}
+
 		if (savedData.remove(title)) {
 			std.debug.print("Removed {s} from the todo",.{title});
 		}
@@ -215,6 +224,7 @@ fn readSaved() !void {
 	defer json.deinit();
 
 	for (json.value) |block| {
+		std.debug.print("{s} {s}", .{block.title, block.notes});
 		try savedData.put(block.title, block);
 	}
 }
