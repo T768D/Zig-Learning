@@ -60,6 +60,9 @@ pub fn main() !void {
 
 
 fn trimEnd(str: []const u8) []const u8 {
+	if (str.len == 0)
+		return str;
+
 	var strLen = str.len - 1;
 	while (str[strLen] == ' ') {
 		strLen -= 1;
@@ -86,7 +89,6 @@ fn awaitInput() []const u8 {
 		std.debug.print("Error when reading input buffer, {}", .{err});
 		return "";
 	};
-
 
 	return trimEnd(input);
 }
@@ -165,6 +167,7 @@ fn parseInput(str: []const u8) !void {
 	}
 
 	else if (std.mem.eql(u8, str, "cls") or std.mem.eql(u8, str, "exit")) {
+		clearConsole();
 		std.process.exit(0);
 	}
 
