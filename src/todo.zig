@@ -38,6 +38,9 @@ var savedData: std.StringHashMap(FileStructure) = undefined;
 
 var ioType: std.Io.Threaded = undefined;
 var IO: std.Io = undefined;
+var reader: std.Io.File.Reader = undefined;
+// inputBuffer is implicitly sent to awaitInput and parseInput via reader
+var inputBuffer: [2048]u8 = undefined;
 
 
 pub fn main() !void {
@@ -89,6 +92,10 @@ fn awaitInput() []const u8 {
 		std.debug.print("Error when reading input buffer, {}", .{err});
 		return "";
 	};
+
+	// must toss the current input otherwise itll stay on the current \n in awaitInput
+	// and cause it to advance without user input
+	reader.interface.toss(1);
 
 	return trimEnd(input);
 }
