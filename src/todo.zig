@@ -48,6 +48,8 @@ pub fn main() !void {
 	
 	defer ioType.deinit();
 
+	// cant be moved up or else therell be a random segfault
+	clearConsole();
 	try readSaved();
 
 	while (true) {
@@ -161,6 +163,10 @@ fn parseInput(str: []const u8) !void {
 		inline for (std.meta.fields(@TypeOf(CommandDescription))) |cmd| {
 			std.debug.print("{s}\n", .{cmd.name});
 		}
+	}
+
+	else if (std.mem.eql(u8, str, "cls") or std.mem.eql(u8, str, "exit")) {
+		std.process.exit(0);
 	}
 
 	else {
