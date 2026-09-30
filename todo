@@ -1,0 +1,2 @@
+Fix the hashmap not listing and properly
+Fix hashmap deleting showing nothing there when added

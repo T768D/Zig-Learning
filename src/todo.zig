@@ -45,10 +45,11 @@ var inputBuffer: [2048]u8 = undefined;
 
 pub fn main() !void {
 	arena = .init(std.heap.page_allocator);
+	defer arena.deinit();
+
     savedData = .init(arena.allocator());
     ioType = .init_single_threaded;
     IO = ioType.io();
-	
 	defer ioType.deinit();
 
 	// cant be moved up or else therell be a random segfault
@@ -119,7 +120,6 @@ fn parseInput(str: []const u8) !void {
 		const title = awaitInput();
 		appendingData.title = title;
 
-		// potential memory leak here, when is buffer deallocated? how long does it live for?
 		while (true) {
 			std.debug.print("Input the priority level", .{});
 			const priority = awaitInput();
@@ -163,6 +163,7 @@ fn parseInput(str: []const u8) !void {
 	else if (std.mem.eql(u8, str, "list")) {
 		var iter = savedData.valueIterator();
 		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
+		defer order.deinit();
 
 		while (iter.next()) |item| {
 			try order.append(std.heap.smp_allocator, item.*);
