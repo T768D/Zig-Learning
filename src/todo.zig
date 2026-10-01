@@ -191,6 +191,10 @@ fn parseInput(str: []const u8) !void {
 		std.process.exit(0);
 	}
 
+	else if (std.mem.eql(u8, str, "save")) {
+		writeSaved();
+	}
+
 	else {
 		clearConsole();
 		std.debug.print("Invalid input", .{});
@@ -203,7 +207,7 @@ fn readSaved() !void {
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
 	const file = cwd.openFile(IO, "config.json", .{}) catch |err| switch (err) {
-		std.Io.File.OpenError.FileNotFound => try cwd.createFile(IO, "config.json", .{}),
+		std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
 		else =>	return err
 	};
 
@@ -241,13 +245,25 @@ fn writeSaved() void {
 	const cwd = std.Io.Dir.cwd();
 
 	const file = cwd.openFile(IO, "config.json", .{}) catch |err| switch (err) {
-		std.Io.File.OpenError.FileNotFound => try cwd.createFile(IO, "config.json", .{}),
-		else => return err
+		std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
+		else => {
+			std.debug.print("Unable to access file \n\n{}", .{err});
+			return;
+		}
 	};
 
 	var writer = file.writer(IO, &.{});
+	// add write functionality here later
 	writer.interface.writeAll() catch |err| {
 		std.debug.print("Failed to write to config file: {}", .{err});
-		std.process.exit(1);
+		return;
+	};
+}
+
+
+fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
+	return cwd.createFile(IO, "config.json", .{}) catch |err| {
+		std.debug.print("Unable to create config file in cwd, {}", .{err});
+		return;
 	};
 }
