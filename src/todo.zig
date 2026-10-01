@@ -138,6 +138,8 @@ fn parseInput(str: []const u8) !void {
 		const input = awaitInput();
 		appendingData.notes = input;
 
+		appendingData.title = try savedData.allocator.dupe(u8, appendingData.title);
+		appendingData.notes = try savedData.allocator.dupe(u8, appendingData.notes);
 		try savedData.put(appendingData.title, appendingData);
 	}
 
@@ -163,7 +165,7 @@ fn parseInput(str: []const u8) !void {
 	else if (std.mem.eql(u8, str, "list")) {
 		var iter = savedData.valueIterator();
 		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
-		defer order.deinit();
+		defer order.deinit(std.heap.smp_allocator);
 
 		while (iter.next()) |item| {
 			try order.append(std.heap.smp_allocator, item.*);
@@ -224,9 +226,13 @@ fn readSaved() !void {
 	};
 	defer json.deinit();
 
-	for (json.value) |block| {
+	// *block makes the capture block mutable
+	for (json.value) |*block| {
 		std.debug.print("{s} {s}", .{block.title, block.notes});
-		try savedData.put(block.title, block);
+
+		block.title = try savedData.allocator.dupe(u8, block.title);
+		block.notes = try savedData.allocator.dupe(u8, block.notes);
+		try savedData.put(block.title, block.*);
 	}
 }
 
