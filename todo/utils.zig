@@ -20,12 +20,22 @@ pub fn trimEnd(str: []const u8) []const u8 {
 	return str[0..strLen];
 }
 
-pub fn parseCommand(a: []const u8) Commands {
+pub fn parseCommand(str: []const u8) Commands {
 	inline for (std.meta.fields(Commands)) |cmd| {
-        if (std.mem.startsWith(u8, a, cmd.name)) {
+        if (std.mem.startsWith(u8, str, cmd.name)) {
             return @field(Commands, cmd.name);
         }
 	}
 
 	return Commands.invalid;
+}
+
+pub fn removeNewLines(str: []const u8) []const u8 {
+	for (str, 0..) |char, index| {
+		if (char == '\n') {
+			str[index] = ' ';
+		}
+	}
+
+	return str;
 }
