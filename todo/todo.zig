@@ -147,12 +147,12 @@ fn readSaved() !void {
 
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
+	// reading doesnt need locks
 	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_write }) 
 		catch |err| switch (err) {
 			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
 			else =>	return err
 		};
-	defer file.unlock(consts.IO);
 
 	var fileReader = file.reader(consts.IO, &.{});
 	const fileContents = fileReader.interface.allocRemaining(
@@ -175,8 +175,6 @@ fn readSaved() !void {
 
 	// *block makes the capture block mutable
 	for (json.value) |*block| {
-		std.debug.print("{s} {s}", .{block.title, block.notes});
-
 		block.title = try savedData.allocator.dupe(u8, block.title);
 		block.notes = try savedData.allocator.dupe(u8, block.notes);
 		try savedData.put(block.title, block.*);
