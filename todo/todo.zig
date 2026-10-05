@@ -152,6 +152,7 @@ fn readSaved() !void {
 			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
 			else =>	return err
 		};
+	defer file.unlock(consts.IO);
 
 	var fileReader = file.reader(consts.IO, &.{});
 	const fileContents = fileReader.interface.allocRemaining(
@@ -186,7 +187,7 @@ fn readSaved() !void {
 fn writeSaved() void {
 	const cwd = std.Io.Dir.cwd();
 
-	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .write_only})
+	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .write_only, .lock = .exclusive })
 		catch |err| switch (err) {
 			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
 			else => {
@@ -194,6 +195,12 @@ fn writeSaved() void {
 				return;
 			}
 		};
+	// already locked when using openFile
+	defer file.unlock(consts.IO);
+
+	file.setLength(consts.IO, 0) catch |err| {
+		std.debug.print("Unable to set file length to 0, {}", .{err});
+	};
 
 	var writer = file.writer(consts.IO, &.{});
 	var iter = savedData.valueIterator();
@@ -236,7 +243,7 @@ fn writeSaved() void {
 
 
 fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
-	return cwd.createFile(consts.IO, "config.json", .{}) catch |err| {
+	return cwd.createFile(consts.IO, "config.json", .{ .lock = .exclusive }) catch |err| {
 		std.debug.print("Unable to create config file in cwd, {}", .{err});
 		std.process.exit(1); // lazy fix
 	};
