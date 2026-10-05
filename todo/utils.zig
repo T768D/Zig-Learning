@@ -30,12 +30,15 @@ pub fn parseCommand(str: []const u8) Commands {
 	return Commands.invalid;
 }
 
+// []const u8 takes in both []const u8 and []u8
 pub fn removeNewLines(str: []const u8) []const u8 {
-	for (str, 0..) |char, index| {
+	const mutstr = @constCast(str);
+
+	for (mutstr, 0..) |char, index| {
 		if (char == '\n') {
-			str[index] = ' ';
+			mutstr[index] = ' ';
 		}
 	}
 
-	return str;
+	return mutstr;
 }
