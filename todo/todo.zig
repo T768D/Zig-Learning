@@ -87,7 +87,7 @@ fn parseInput(str: []const u8) !void {
 		try savedData.put(appendingData.title, appendingData);
 	},
 
-	.delete => {
+	.delete, .remove => {
 		var title: []const u8 = undefined;
 
 		if (str.len <= 6) {
