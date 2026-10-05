@@ -4,6 +4,7 @@ const utils = @import("utils.zig");
 const parseCommand = utils.parseCommand;
 const clearConsole = utils.clearConsole;
 const trimEnd = utils.trimEnd;
+const removeNewLines = utils.removeNewLines;
 
 // keeping IO under consts because would need to convert out of pointer anyways, not much typing saved
 const consts = @import("consts.zig");
@@ -22,8 +23,7 @@ pub fn main() !void {
 	try readSaved();
 
 	while (true) {
-		const input = awaitInput();
-		try parseInput(input);
+		try parseInput(awaitInput());
 	}
 }
 
@@ -64,8 +64,7 @@ fn parseInput(str: []const u8) !void {
 		};
 
 		std.debug.print("Input the title", .{});
-		const title = awaitInput();
-		appendingData.title = title;
+		appendingData.title = removeNewLines(awaitInput());
 
 		while (true) {
 			std.debug.print("Input the priority level", .{});
@@ -77,13 +76,11 @@ fn parseInput(str: []const u8) !void {
 			};
 
 			appendingData.priority = convertedInt;
-			appendingData.title = title;
 			break;
 		}
 
 		std.debug.print("Input notes", .{});
-		const input = awaitInput();
-		appendingData.notes = input;
+		appendingData.notes = awaitInput();
 
 		appendingData.title = try savedData.allocator.dupe(u8, appendingData.title);
 		appendingData.notes = try savedData.allocator.dupe(u8, appendingData.notes);
@@ -212,8 +209,8 @@ fn writeSaved() void {
 		const formatted = std.fmt.allocPrint(
 			std.heap.smp_allocator,
 			// needs {{ otherwise zig will think its format string
-			"{s}\n{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}\n",
-			.{ if (isFirst) "" else ",", block.title, block.priority, block.notes },
+			"{s}{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}",
+			.{ if (isFirst) "" else ",\n", block.title, block.priority, block.notes },
 		) catch |err| {
 			std.debug.print("Failed to format json string\n {}", .{err});
 			return;
