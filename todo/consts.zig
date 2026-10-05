@@ -21,14 +21,15 @@ pub const Commands = enum {
 
 	pub fn describe(self: @This()) []const u8 {
 		return switch (self)  {
-			.help => "",
-			.add => "",
-			.delete => "",
-			.list => "",
-			.save => "",
-			.cls => "",
-			.exit => "",
-			.invalid => ""
+			.help => "Lists all the commands and what they do",
+			.add => "Adds a item to the todo list",
+			.delete => "Deletes a item from the todo list. This command can accept the item name as a param",
+			.list => "Lists all the items in the todo list",
+			.save => "Saves the todo list",
+			.cls => "Exits the program",
+			.exit => "Exits the program",
+			// adding a return union was too verbose
+			.invalid => "A invalid command, here for technical reasons"
 		};
 	}
 };
