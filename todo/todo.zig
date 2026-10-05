@@ -1,63 +1,22 @@
 const std = @import("std");
 
+const utils = @import("utils.zig");
+const clearConsole = utils.clearConsole;
+const trimEnd = utils.trimEnd;
 
-// add, remove, list, complete
-// Store todos in memory first, then save them to a file.
-
-const FileStructure = struct {
-	title: []const u8,
-	priority: u16,
-	notes: []const u8
-};
-
-
-const Commands = enum {
-	help,
-	add,
-	delete
-};
-const CommandDescription: struct {
-	help: []const u8,
-	add: []const u8,
-	delete: []const u8
-} = .{
-	.help = "",
-	.add = "",
-	.delete = ""
-};
-comptime {
-    for (@typeInfo(Commands).@"enum".fields) |field| {
-        if (!@hasField(@TypeOf(CommandDescription), field.name))
-            @compileError("Missing description for command: " ++ field.name);
-    }
-}
-
-var arena: std.heap.ArenaAllocator = undefined;
-// hashmap because we need to access title when user enteres add/remove
-var savedData: std.StringHashMap(FileStructure) = undefined;
-
-var ioType: std.Io.Threaded = undefined;
-var IO: std.Io = undefined;
-var reader: std.Io.File.Reader = undefined;
-// inputBuffer is implicitly sent to awaitInput and parseInput via reader
-var inputBuffer: [2048]u8 = undefined;
+const consts = @import("consts.zig");
+const reader = &consts.reader.interface;
+const FileStructure = consts.FileStructure;
+const CommandDescription = consts.CommandDescription;
+const savedData = &consts.savedData;
 
 
 pub fn main() !void {
-	arena = .init(std.heap.page_allocator);
-	defer arena.deinit();
-
-    savedData = .init(arena.allocator());
-    ioType = .init_single_threaded;
-    IO = ioType.io();
-	defer ioType.deinit();
+	consts.init();
 
 	// cant be moved up or else therell be a random segfault
 	clearConsole();
 	try readSaved();
-
-	const stdin = std.Io.File.stdin();
-	reader = stdin.readerStreaming(IO, &inputBuffer);
 
 	while (true) {
 		const input = awaitInput();
@@ -66,37 +25,19 @@ pub fn main() !void {
 }
 
 
-fn trimEnd(str: []const u8) []const u8 {
-	if (str.len == 0)
-		return str;
-
-	var strLen = str.len - 1;
-	while (str[strLen] == ' ') {
-		strLen -= 1;
-	}
-
-	return str[0..strLen];
-}
-
-fn clearConsole() void {
-	// "\x1b[2J" clears the screen and "\x1b[H" moves the cursor to the top-left
-	std.Io.File.stdout().writeStreamingAll(IO, "\x1b[2J\x1b[H") catch {};
-}
-
-
 fn awaitInput() []const u8 {
 
 	std.debug.print("\n>",.{});
 
 	// this waits until \n is streamed into the buffer then executes, is blocking
-	const input = reader.interface.takeDelimiterExclusive('\n') catch |err| {
+	const input = reader.takeDelimiterExclusive('\n') catch |err| {
 		std.debug.print("Error when reading input buffer, {}", .{err});
 		return "";
 	};
 
 	// must toss the current input otherwise itll stay on the current \n in awaitInput
 	// and cause it to advance without user input
-	reader.interface.toss(1);
+	reader.toss(1);
 
 	return trimEnd(input);
 }
@@ -108,8 +49,9 @@ fn sortAssit(_: void, A: FileStructure, B: FileStructure) bool {
 
 
 fn parseInput(str: []const u8) !void {
+	clearConsole();
 
-	if (std.mem.eql(u8, str, "add")) {
+	if (std.mem.eql(u8, str, @tagName(consts.Commands.add))) {
 		var appendingData: FileStructure = .{
 			.title = "",
 			.priority = 0,
@@ -138,12 +80,12 @@ fn parseInput(str: []const u8) !void {
 		const input = awaitInput();
 		appendingData.notes = input;
 
-		appendingData.title = try savedData.allocator.dupe(u8, appendingData.title);
-		appendingData.notes = try savedData.allocator.dupe(u8, appendingData.notes);
-		try savedData.put(appendingData.title, appendingData);
+		appendingData.title = try savedData.*.allocator.dupe(u8, appendingData.title);
+		appendingData.notes = try savedData.*.allocator.dupe(u8, appendingData.notes);
+		try savedData.*.put(appendingData.title, appendingData);
 	}
 
-	else if (std.mem.startsWith(u8,str, "delete")) {
+	else if (std.mem.startsWith(u8,str, @tagName(consts.Commands.delete))) {
 		var title: []const u8 = undefined;
 
 		if (str.len <= 6) {
@@ -154,7 +96,7 @@ fn parseInput(str: []const u8) !void {
 			title = str[7..str.len];
 		}
 
-		if (savedData.remove(title)) {
+		if (savedData.*.remove(title)) {
 			std.debug.print("Removed {s} from the todo",.{title});
 		}
 		else {
@@ -162,8 +104,8 @@ fn parseInput(str: []const u8) !void {
 		}
 	}
 
-	else if (std.mem.eql(u8, str, "list")) {
-		var iter = savedData.valueIterator();
+	else if (std.mem.eql(u8, str, @tagName(consts.Commands.list))) {
+		var iter = savedData.*.valueIterator();
 		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
 		defer order.deinit(std.heap.smp_allocator);
 
@@ -178,7 +120,7 @@ fn parseInput(str: []const u8) !void {
 		}
 	}
 
-	else if (std.mem.eql(u8, str, "help")) {
+	else if (std.mem.eql(u8, str, @tagName(consts.Commands.help))) {
 		// std.meta.fields is comptime, therefore loop needs inlining
 		// std.meta.fields takes a comptime object and makes its data accessible
 		inline for (std.meta.fields(@TypeOf(CommandDescription))) |cmd| {
@@ -187,7 +129,6 @@ fn parseInput(str: []const u8) !void {
 	}
 
 	else if (std.mem.eql(u8, str, "cls") or std.mem.eql(u8, str, "exit")) {
-		clearConsole();
 		std.process.exit(0);
 	}
 
@@ -196,7 +137,6 @@ fn parseInput(str: []const u8) !void {
 	}
 
 	else {
-		clearConsole();
 		std.debug.print("Invalid input", .{});
 	}
 }
@@ -206,12 +146,13 @@ fn readSaved() !void {
 
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
-	const file = cwd.openFile(IO, "config.json", .{}) catch |err| switch (err) {
-		std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
-		else =>	return err
-	};
+	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_write }) 
+		catch |err| switch (err) {
+			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
+			else =>	return err
+		};
 
-	var fileReader = file.reader(IO, &.{});
+	var fileReader = file.reader(consts.IO, &.{});
 	const fileContents = fileReader.interface.allocRemaining(
 		std.heap.smp_allocator,
 		.unlimited,
@@ -234,9 +175,9 @@ fn readSaved() !void {
 	for (json.value) |*block| {
 		std.debug.print("{s} {s}", .{block.title, block.notes});
 
-		block.title = try savedData.allocator.dupe(u8, block.title);
-		block.notes = try savedData.allocator.dupe(u8, block.notes);
-		try savedData.put(block.title, block.*);
+		block.title = try savedData.*.allocator.dupe(u8, block.title);
+		block.notes = try savedData.*.allocator.dupe(u8, block.notes);
+		try savedData.*.put(block.title, block.*);
 	}
 }
 
@@ -244,26 +185,58 @@ fn readSaved() !void {
 fn writeSaved() void {
 	const cwd = std.Io.Dir.cwd();
 
-	const file = cwd.openFile(IO, "config.json", .{}) catch |err| switch (err) {
-		std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
-		else => {
-			std.debug.print("Unable to access file \n\n{}", .{err});
-			return;
-		}
-	};
+	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .write_only})
+		catch |err| switch (err) {
+			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
+			else => {
+				std.debug.print("Unable to access file \n\n{}", .{err});
+				return;
+			}
+		};
 
-	var writer = file.writer(IO, &.{});
-	// add write functionality here later
-	writer.interface.writeAll() catch |err| {
-		std.debug.print("Failed to write to config file: {}", .{err});
+	var writer = file.writer(consts.IO, &.{});
+	var iter = savedData.*.valueIterator();
+
+	writer.interface.writeByte('[') catch |err| {
+		std.debug.print("Failed to write initialiser to config file: {}", .{err});
 		return;
 	};
+
+	var isFirst = true;
+	while (iter.next()) |block| {
+
+		const formatted = std.fmt.allocPrint(
+			std.heap.smp_allocator,
+			// needs {{ otherwise zig will think its format string
+			"{s}\n{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}\n",
+			.{ if (isFirst) "" else ",", block.title, block.priority, block.notes },
+		) catch |err| {
+			std.debug.print("Failed to format json string\n {}", .{err});
+			return;
+		};
+		defer std.heap.smp_allocator.free(formatted);
+
+		writer.interface.writeAll(formatted) catch |err| {
+			std.debug.print("Failed to write block to config file: {}", .{err});
+			return;
+		};
+
+		isFirst = false;
+	}
+
+	writer.interface.writeByte(']') catch |err| {
+		std.debug.print("Failed to write initialiser to config file: {}", .{err});
+		return;
+	};
+
+
+	std.debug.print("Written to config file", .{});
 }
 
 
 fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
-	return cwd.createFile(IO, "config.json", .{}) catch |err| {
+	return cwd.createFile(consts.IO, "config.json", .{}) catch |err| {
 		std.debug.print("Unable to create config file in cwd, {}", .{err});
-		return;
+		std.process.exit(1); // lazy fix
 	};
 }
