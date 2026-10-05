@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const utils = @import("utils.zig");
+const parseCommand = utils.parseCommand;
 const clearConsole = utils.clearConsole;
 const trimEnd = utils.trimEnd;
 
@@ -53,7 +54,9 @@ fn sortAssit(_: void, A: FileStructure, B: FileStructure) bool {
 fn parseInput(str: []const u8) !void {
 	clearConsole();
 
-	if (std.mem.eql(u8, str, @tagName(Commands.add))) {
+	// convert to switch?
+	switch (parseCommand(str)) {
+	.add => {
 		var appendingData: FileStructure = .{
 			.title = "",
 			.priority = 0,
@@ -85,9 +88,41 @@ fn parseInput(str: []const u8) !void {
 		appendingData.title = try savedData.allocator.dupe(u8, appendingData.title);
 		appendingData.notes = try savedData.allocator.dupe(u8, appendingData.notes);
 		try savedData.put(appendingData.title, appendingData);
+	},
+
+	.list => {
+		var iter = savedData.valueIterator();
+		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
+		defer order.deinit(std.heap.smp_allocator);
+
+		while (iter.next()) |item| {
+			try order.append(std.heap.smp_allocator, item.*);
+		}
+
+		std.mem.sort(FileStructure,order.items,{}, sortAssit);
+	
+		for (order.items) |item| {
+			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
+		}
+	},
+
+	.help => {
+		// std.meta.fields is comptime, therefore loop needs inlining
+		// std.meta.fields takes a comptime object and makes its data accessible
+		inline for (std.meta.fields(Commands)) |cmd| {
+			std.debug.print("{s}: {s}\n", .{cmd.name, @field(Commands, cmd.name).describe()});
+		}
+	},
+
+	.exit => std.process.exit(0),
+	.save => writeSaved(),
+	.invalid => std.debug.print("Invalid input", .{}),
+	// switch will return Commands.invalid for a invalid command, so i dont have to make a union so its less verbose
+	else => unreachable
+
 	}
 
-	else if (std.mem.startsWith(u8,str, @tagName(Commands.delete))) {
+	if (std.mem.startsWith(u8,str, @tagName(Commands.delete))) {
 		var title: []const u8 = undefined;
 
 		if (str.len <= 6) {
@@ -104,42 +139,6 @@ fn parseInput(str: []const u8) !void {
 		else {
 			std.debug.print("No todo with the name {s} exists", .{title});
 		}
-	}
-
-	else if (std.mem.eql(u8, str, @tagName(Commands.list))) {
-		var iter = savedData.valueIterator();
-		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
-		defer order.deinit(std.heap.smp_allocator);
-
-		while (iter.next()) |item| {
-			try order.append(std.heap.smp_allocator, item.*);
-		}
-
-		std.mem.sort(FileStructure,order.items,{}, sortAssit);
-	
-		for (order.items) |item| {
-			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
-		}
-	}
-
-	else if (std.mem.eql(u8, str, @tagName(Commands.help))) {
-		// std.meta.fields is comptime, therefore loop needs inlining
-		// std.meta.fields takes a comptime object and makes its data accessible
-		inline for (std.meta.fields(@TypeOf(CommandDescription))) |cmd| {
-			std.debug.print("{s}\n", .{cmd.name});
-		}
-	}
-
-	else if (std.mem.eql(u8, str, "cls") or std.mem.eql(u8, str, "exit")) {
-		std.process.exit(0);
-	}
-
-	else if (std.mem.eql(u8, str, "save")) {
-		writeSaved();
-	}
-
-	else {
-		std.debug.print("Invalid input", .{});
 	}
 }
 

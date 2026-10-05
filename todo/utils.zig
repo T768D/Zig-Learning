@@ -1,5 +1,7 @@
 const std = @import("std");
 const IO = &@import("consts.zig").IO;
+const Commands = @import("consts.zig").Commands;
+const CommandDescription = @import("consts.zig").CommandDescription;
 
 
 pub fn clearConsole() void {
@@ -17,4 +19,14 @@ pub fn trimEnd(str: []const u8) []const u8 {
 	}
 
 	return str[0..strLen];
+}
+
+pub fn parseCommand(a: []const u8) Commands {
+	inline for (std.meta.fields(Commands)) |cmd| {
+        if (std.mem.eql(u8, a, cmd.name)) {
+            return @field(Commands, cmd.name);
+        }
+	}
+
+	return Commands.invalid;
 }
