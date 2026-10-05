@@ -4,10 +4,12 @@ const utils = @import("utils.zig");
 const clearConsole = utils.clearConsole;
 const trimEnd = utils.trimEnd;
 
+// keeping IO under consts because would need to convert out of pointer anyways, not much typing saved
 const consts = @import("consts.zig");
-const reader = &consts.reader.interface;
+const Commands = consts.Commands;
 const FileStructure = consts.FileStructure;
 const CommandDescription = consts.CommandDescription;
+const reader = &consts.reader.interface;
 const savedData = &consts.savedData;
 
 
@@ -51,7 +53,7 @@ fn sortAssit(_: void, A: FileStructure, B: FileStructure) bool {
 fn parseInput(str: []const u8) !void {
 	clearConsole();
 
-	if (std.mem.eql(u8, str, @tagName(consts.Commands.add))) {
+	if (std.mem.eql(u8, str, @tagName(Commands.add))) {
 		var appendingData: FileStructure = .{
 			.title = "",
 			.priority = 0,
@@ -80,12 +82,12 @@ fn parseInput(str: []const u8) !void {
 		const input = awaitInput();
 		appendingData.notes = input;
 
-		appendingData.title = try savedData.*.allocator.dupe(u8, appendingData.title);
-		appendingData.notes = try savedData.*.allocator.dupe(u8, appendingData.notes);
-		try savedData.*.put(appendingData.title, appendingData);
+		appendingData.title = try savedData.allocator.dupe(u8, appendingData.title);
+		appendingData.notes = try savedData.allocator.dupe(u8, appendingData.notes);
+		try savedData.put(appendingData.title, appendingData);
 	}
 
-	else if (std.mem.startsWith(u8,str, @tagName(consts.Commands.delete))) {
+	else if (std.mem.startsWith(u8,str, @tagName(Commands.delete))) {
 		var title: []const u8 = undefined;
 
 		if (str.len <= 6) {
@@ -96,7 +98,7 @@ fn parseInput(str: []const u8) !void {
 			title = str[7..str.len];
 		}
 
-		if (savedData.*.remove(title)) {
+		if (savedData.remove(title)) {
 			std.debug.print("Removed {s} from the todo",.{title});
 		}
 		else {
@@ -104,8 +106,8 @@ fn parseInput(str: []const u8) !void {
 		}
 	}
 
-	else if (std.mem.eql(u8, str, @tagName(consts.Commands.list))) {
-		var iter = savedData.*.valueIterator();
+	else if (std.mem.eql(u8, str, @tagName(Commands.list))) {
+		var iter = savedData.valueIterator();
 		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
 		defer order.deinit(std.heap.smp_allocator);
 
@@ -120,7 +122,7 @@ fn parseInput(str: []const u8) !void {
 		}
 	}
 
-	else if (std.mem.eql(u8, str, @tagName(consts.Commands.help))) {
+	else if (std.mem.eql(u8, str, @tagName(Commands.help))) {
 		// std.meta.fields is comptime, therefore loop needs inlining
 		// std.meta.fields takes a comptime object and makes its data accessible
 		inline for (std.meta.fields(@TypeOf(CommandDescription))) |cmd| {
@@ -175,9 +177,9 @@ fn readSaved() !void {
 	for (json.value) |*block| {
 		std.debug.print("{s} {s}", .{block.title, block.notes});
 
-		block.title = try savedData.*.allocator.dupe(u8, block.title);
-		block.notes = try savedData.*.allocator.dupe(u8, block.notes);
-		try savedData.*.put(block.title, block.*);
+		block.title = try savedData.allocator.dupe(u8, block.title);
+		block.notes = try savedData.allocator.dupe(u8, block.notes);
+		try savedData.put(block.title, block.*);
 	}
 }
 
@@ -195,7 +197,7 @@ fn writeSaved() void {
 		};
 
 	var writer = file.writer(consts.IO, &.{});
-	var iter = savedData.*.valueIterator();
+	var iter = savedData.valueIterator();
 
 	writer.interface.writeByte('[') catch |err| {
 		std.debug.print("Failed to write initialiser to config file: {}", .{err});
