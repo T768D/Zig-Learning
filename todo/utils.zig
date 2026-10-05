@@ -1,7 +1,6 @@
 const std = @import("std");
 const IO = &@import("consts.zig").IO;
 const Commands = @import("consts.zig").Commands;
-const CommandDescription = @import("consts.zig").CommandDescription;
 
 
 pub fn clearConsole() void {

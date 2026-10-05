@@ -14,30 +14,24 @@ pub const Commands = enum {
 	add,
 	delete,
 	list,
+	save,
 	cls,
-	exit
+	exit,
+	invalid,
+
+	pub fn describe(self: @This()) []const u8 {
+		return switch (self)  {
+			.help => "",
+			.add => "",
+			.delete => "",
+			.list => "",
+			.save => "",
+			.cls => "",
+			.exit => "",
+			.invalid => ""
+		};
+	}
 };
-pub const CommandDescription: struct {
-	help: []const u8,
-	add: []const u8,
-	delete: []const u8,
-	list: []const u8,
-	cls: []const u8,
-	exit: []const u8
-} = .{
-	.help = "",
-	.add = "",
-	.delete = "",
-	.list = "",
-	.cls = "",
-	.exit = "",
-};
-comptime {
-    for (@typeInfo(Commands).@"enum".fields) |field| {
-        if (!@hasField(@TypeOf(CommandDescription), field.name))
-            @compileError("Missing description for command: " ++ field.name);
-    }
-}
 
 
 var arena: std.heap.ArenaAllocator = undefined;
