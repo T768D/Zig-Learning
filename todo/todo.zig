@@ -90,6 +90,25 @@ fn parseInput(str: []const u8) !void {
 		try savedData.put(appendingData.title, appendingData);
 	},
 
+	.delete => {
+		var title: []const u8 = undefined;
+
+		if (str.len <= 6) {
+			std.debug.print("Input title", .{});
+			title = awaitInput();
+		}
+		else {
+			title = str[7..str.len];
+		}
+
+		if (savedData.remove(title)) {
+			std.debug.print("Removed {s} from the todo",.{title});
+		}
+		else {
+			std.debug.print("No todo with the name {s} exists", .{title});
+		}
+	},
+
 	.list => {
 		var iter = savedData.valueIterator();
 		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
@@ -114,32 +133,16 @@ fn parseInput(str: []const u8) !void {
 		}
 	},
 
-	.exit => std.process.exit(0),
+	.exit, .cls => {
+		clearConsole();
+		std.process.exit(0);
+	},
+
 	.save => writeSaved(),
-	.invalid => std.debug.print("Invalid input", .{}),
 	// switch will return Commands.invalid for a invalid command, so i dont have to make a union so its less verbose
-	else => unreachable
-
+	.invalid => std.debug.print("Invalid input", .{}),
 	}
 
-	if (std.mem.startsWith(u8,str, @tagName(Commands.delete))) {
-		var title: []const u8 = undefined;
-
-		if (str.len <= 6) {
-			std.debug.print("Input title", .{});
-			title = awaitInput();
-		}
-		else {
-			title = str[7..str.len];
-		}
-
-		if (savedData.remove(title)) {
-			std.debug.print("Removed {s} from the todo",.{title});
-		}
-		else {
-			std.debug.print("No todo with the name {s} exists", .{title});
-		}
-	}
 }
 
 

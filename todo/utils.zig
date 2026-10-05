@@ -22,7 +22,7 @@ pub fn trimEnd(str: []const u8) []const u8 {
 
 pub fn parseCommand(a: []const u8) Commands {
 	inline for (std.meta.fields(Commands)) |cmd| {
-        if (std.mem.eql(u8, a, cmd.name)) {
+        if (std.mem.startsWith(u8, a, cmd.name)) {
             return @field(Commands, cmd.name);
         }
 	}
