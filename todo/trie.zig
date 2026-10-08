@@ -3,60 +3,54 @@ const FileStructure = @import("consts.zig").FileStructure;
 
 const Node = struct {
 	val: ?*FileStructure,
-	next: ?std.AutoHashMap(u8, Node),
+	next: ?std.AutoHashMap(u8, *Node),
 };
 
 pub const TrieClass = struct {
-	rootNode: std.AutoHashMap(u8, Node),
+	rootNode: Node,
 	allocator: std.mem.Allocator,
-
-	fn rootNodePacked(self: @This()) Node {
-		return .{
-			.next = self.rootNode,
-			.val = null
-		};
-	}
 	
-	pub fn addItem(self: @This(), item: *FileStructure) !void {
-		var lastNode = @constCast(&self.rootNodePacked());
+	pub fn addItem(self: *@This(), item: *FileStructure) !void {
+		// dont want to make entire class mutable
+		var lastNode: *Node = @constCast(&self.rootNode);
 
 		for (item.title) |char| {
 			if (lastNode.next == null) {
-				lastNode.next = initHashmap();
+				lastNode.next = self.initHashmap();
 			}
 
 			var hashmap = lastNode.next orelse @panic("lastnode.next should be defined");
-			lastNode = hashmap.getPtr(char) orelse b: {
-				const nextNode: Node = .{
-					.next = initHashmap(),
+			lastNode = hashmap.get(char) orelse b: {
+				const nextNode = try self.allocator.create(Node);
+				nextNode.* = .{
+					.next = self.initHashmap(),
 					.val = null
 				};
 				// no need to alloc to heap, hashmap copies the value
 				try hashmap.put(char, nextNode);
-				break :b hashmap.getPtr(char) orelse @panic("added node to hashmap but unable to get same node");
+				break :b hashmap.get(char) orelse @panic("added node to hashmap but unable to get same node");
 			};
 		}
 
 		lastNode.val = item;
 	}
 
-	// pub fn delete(self: @This(), item: *FileStructure) bool {
+	// pub fn delete(self: *@This(), item: *FileStructure) bool {
 	// }
 
-	fn iterate(self: @This(), str: []const u8) ?*const Node {
-		// idk if this is the best way but whatever
-		var lastNode = &self.rootNodePacked();
+	fn iterate(self: *@This(), str: []const u8) ?*const Node {
+		var lastNode = &self.rootNode;
 
 		for (str) |char| {
 			std.debug.print("{s} {c}", .{str, char});
-			lastNode = lastNode.next.?.getPtr(char) orelse return null;
+			lastNode = lastNode.next.?.get(char) orelse return null;
 		}
 
 		return lastNode;
 	}
 
 	// resultAlloc should be a arena allocator to deinit the slices in the array easily
-	pub fn search(self: @This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
+	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
 		const lastNode = self.iterate(str) orelse return null;
 
 		var allocTemp = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
@@ -78,11 +72,15 @@ pub const TrieClass = struct {
 			var iter = last.next.?.valueIterator();
 			while (iter.next()) |block| {
 				// block might be stack memory, need to copy to resultAlloc?
-				try stack.append(searchAlloc, block);
+				try stack.append(searchAlloc, block.*);
 			}
 		}
 		
 		return results;
+	}
+
+	fn initHashmap(self: *@This()) std.AutoHashMap(u8, *Node) {
+		return std.AutoHashMap(u8, *Node).init(self.allocator);
 	}
 
 	// pub fn deinit() void {
@@ -95,10 +93,9 @@ pub const TrieClass = struct {
 pub fn init(alloc: std.mem.Allocator) TrieClass {
     return .{
         .allocator = alloc,
-        .rootNode = initHashmap(),
+        .rootNode = .{
+			.next = std.AutoHashMap(u8, *Node).init(alloc),
+			.val = null
+		},
     };
-}
-
-fn initHashmap() std.AutoHashMap(u8, Node) {
-	return std.AutoHashMap(u8, Node).init(std.heap.smp_allocator);
 }
