@@ -12,24 +12,27 @@ pub const TrieClass = struct {
 	
 	pub fn addItem(self: *@This(), item: *FileStructure) !void {
 		// dont want to make entire class mutable
-		var lastNode: *Node = @constCast(&self.rootNode);
+		var lastNode = &self.rootNode;
 
 		for (item.title) |char| {
 			if (lastNode.next == null) {
 				lastNode.next = self.initHashmap();
 			}
 
-			var hashmap = lastNode.next orelse @panic("lastnode.next should be defined");
-			lastNode = hashmap.get(char) orelse b: {
-				const nextNode = try self.allocator.create(Node);
-				nextNode.* = .{
-					.next = self.initHashmap(),
-					.val = null
-				};
-				// no need to alloc to heap, hashmap copies the value
-				try hashmap.put(char, nextNode);
-				break :b hashmap.get(char) orelse @panic("added node to hashmap but unable to get same node");
+			var hashmap: *std.AutoHashMap(u8, *Node) = &(lastNode.next orelse @panic("lastnode.next should be defined"));
+			if (hashmap.get(char)) |nextNode| {
+                lastNode = nextNode;
+                continue;
+            }
+
+			const nextNode = try self.allocator.create(Node);
+			nextNode.* = .{
+				.next = self.initHashmap(),
+				.val = null
 			};
+			// no need to alloc to heap, hashmap copies the value
+			try hashmap.put(char, nextNode);
+			lastNode = nextNode;
 		}
 
 		lastNode.val = item;
@@ -42,7 +45,6 @@ pub const TrieClass = struct {
 		var lastNode = &self.rootNode;
 
 		for (str) |char| {
-			std.debug.print("{s} {c}", .{str, char});
 			lastNode = lastNode.next.?.get(char) orelse return null;
 		}
 
