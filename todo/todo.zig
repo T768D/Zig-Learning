@@ -54,13 +54,15 @@ fn awaitInput() []const u8 {
 fn sortAssit(_: void, A: FileStructure, B: FileStructure) bool {
 	return A.priority > B.priority;
 }
+fn sortAssitPointer(_: void, A: *FileStructure, B: *FileStructure) bool {
+	return A.priority > B.priority;
+}
 
 
 fn parseInput(str: []const u8) !void {
 	clearConsole();
 
-	// convert to switch?
-	switch (parseCommand(str)) {
+	sw: switch (parseCommand(str)) {
 	.add => {
 		var appendingData: FileStructure = .{
 			.title = "",
@@ -133,6 +135,7 @@ fn parseInput(str: []const u8) !void {
 			try searchTrie.addItem(item);
 		}
 
+		std.debug.print("Enter title to search for", .{});
 		const searchItem = awaitInput();
 		var tempAlloc = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
 		defer tempAlloc.deinit();
@@ -140,11 +143,17 @@ fn parseInput(str: []const u8) !void {
 		const searchAlloc = tempAlloc.allocator();
 		const searchResult = searchTrie.search(searchItem, searchAlloc) catch |err| {
 			std.debug.print("Unable to search through trie\n {}", .{err});
+			break :sw;
 		};
 
-		std.mem.sort(FileStructure,searchResult.items,{}, sortAssit);
+		if (searchResult == null) {
+			std.debug.print("No matching items", .{});
+			break :sw;
+		}
+
+		std.mem.sort(*FileStructure,searchResult.?.items,{}, sortAssitPointer);
 	
-		for (searchResult.items) |item| {
+		for (searchResult.?.items) |item| {
 			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
 	},

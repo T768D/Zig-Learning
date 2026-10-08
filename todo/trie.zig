@@ -28,8 +28,8 @@ pub const TrieClass = struct {
 					.next = initHashmap(),
 					.val = undefined
 				};
-				// dupe to outlive stack
-				try hashmap.put(char, self.alloc.dupe(Node, nextNode));
+				// no need to alloc to heap, hashmap copies the value
+				try hashmap.put(char, nextNode);
 				break :b nextNode;
 			};
 		}
@@ -38,10 +38,13 @@ pub const TrieClass = struct {
 	}
 
 	fn iterate(self: @This(), str: []const u8) ?Node {
-		var lastNode: Node = self.rootNode;
+		var lastNode: Node = .{
+			.next = self.rootNode,
+			.val = undefined
+		};
 
 		for (str) |char| {
-			lastNode = lastNode.next.?.get(char) orelse return;
+			lastNode = lastNode.next.?.get(char) orelse return null;
 		}
 
 		return lastNode;
@@ -49,29 +52,29 @@ pub const TrieClass = struct {
 
 	// resultAlloc should be a arena allocator to deinit the slices in the array easily
 	pub fn search(self: @This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
-		const lastNode = self.iterate(str) orelse return; //empty slice
+		var lastNode = self.iterate(str) orelse return null;
 
-		const allocTemp = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+		var allocTemp = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
 		defer allocTemp.deinit();
 		const searchAlloc = allocTemp.allocator();
 
-		const stack = try std.ArrayList(Node).initCapacity(searchAlloc, 60);
-		stack.appendAssumeCapacity(lastNode);
+		var stack = try std.ArrayList(*Node).initCapacity(searchAlloc, 60);
+		stack.appendAssumeCapacity(&lastNode);
 
 		// initialised with resultAlloc beacuse lives after func ends
-		const results = try std.ArrayList(*FileStructure).initCapacity(resultAlloc, 20);
+		var results = try std.ArrayList(*FileStructure).initCapacity(resultAlloc, 20);
 
 		// do depth first because shifting arr by 1 is o(n) each time
 		while (stack.pop()) |last| {
 
-			if (last.val.?) {
-				results.append(last.val.?);
+			if (last.val) |val| {
+				try results.append(resultAlloc, val);
 			}
 
 			var iter = last.next.?.valueIterator();
 			while (iter.next()) |block| {
 				// block might be stack memory, need to copy to resultAlloc?
-				stack.append(searchAlloc, block);
+				try stack.append(searchAlloc, block);
 			}
 		}
 		
