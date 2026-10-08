@@ -21,7 +21,7 @@ const initTrie = @import("trie.zig").init;
 
 pub fn main() !void {
 	consts.init();
-	searchTrie = initTrie();
+	searchTrie = initTrie(std.heap.smp_allocator);
 
 	// cant be moved up or else therell be a random segfault
 	clearConsole();

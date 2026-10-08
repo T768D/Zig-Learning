@@ -1,0 +1,3 @@
+add delete in trie
+implement binary format and settings for switching
+implement allocator that allows for individual, and freeing of all items
