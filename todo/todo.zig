@@ -14,9 +14,14 @@ const CommandDescription = consts.CommandDescription;
 const reader = &consts.reader.interface;
 const savedData = &consts.savedData;
 
+var searchTrie: @import("trie.zig").TrieClass = undefined;
+
+const initTrie = @import("trie.zig").init;
+
 
 pub fn main() !void {
 	consts.init();
+	searchTrie = initTrie();
 
 	// cant be moved up or else therell be a random segfault
 	clearConsole();
@@ -118,6 +123,28 @@ fn parseInput(str: []const u8) !void {
 		std.mem.sort(FileStructure,order.items,{}, sortAssit);
 	
 		for (order.items) |item| {
+			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
+		}
+	},
+
+	.search => {
+		var iter = savedData.valueIterator();
+		while (iter.next()) |item| {
+			searchTrie.addItem(item);	
+		}
+
+		const searchItem = awaitInput();
+		var tempAlloc = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+		defer tempAlloc.deinit();
+
+		const searchAlloc = tempAlloc.allocator();
+		const searchResult = searchTrie.search(searchItem, searchAlloc) catch |err| {
+			std.debug.print("Unable to search through trie\n {}", .{err});
+		};
+
+		std.mem.sort(FileStructure,searchResult.items,{}, sortAssit);
+	
+		for (searchResult.items) |item| {
 			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
 	},

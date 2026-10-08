@@ -1,4 +1,5 @@
 const std = @import("std");
+const TrieClass = @import("trie.zig").TrieClass;
 
 
 // add, remove, list, complete
@@ -14,6 +15,7 @@ pub const Commands = enum {
 	add,
 	delete, remove,
 	list,
+	search,
 	save,
 	cls, exit,
 	invalid,
@@ -24,6 +26,7 @@ pub const Commands = enum {
 			.add => "Adds a item to the todo list",
 			.delete, .remove => "Deletes a item from the todo list. This command can accept the item name as a param",
 			.list => "Lists all the items in the todo list",
+			.search => "Searches the todo list based on user input",
 			.save => "Saves the todo list",
 			.cls, .exit => "Exits the program",
 			// adding a return union was too verbose
