@@ -3,27 +3,38 @@ const FileStructure = @import("consts.zig").FileStructure;
 
 const Node = struct {
 	val: ?*FileStructure,
-	next: ?*std.AutoHashMap(u8, Node),
+	next: ?std.AutoHashMap(u8, Node),
 };
 
 pub const TrieClass = struct {
-	rootNode: *std.AutoHashMap(u8, Node),
+	rootNode: std.AutoHashMap(u8, Node),
+	allocTemp: std.heap.ArenaAllocator,
+	alloc: std.mem.Allocator,
 	
-	pub fn addItem(self: @This(), item: *FileStructure) void {
-		var lastTrie = self.rootNode;
+	pub fn addItem(self: @This(), item: *FileStructure) !void {
+		var lastNode: Node = .{
+			.next = self.rootNode,
+			.val = undefined
+		};
+
 		for (item.title) |char| {
-			const nextExists = lastTrie.get(char);
-			if (nextExists) |next| {
-				lastTrie = next;
+			if (lastNode.next != null) {
+				lastNode.next = initHashmap();
 			}
-			else {
-				nextExists = initHashmap();
-				lastTrie.put(char, nextExists);
-				lastTrie = nextExists;
-			}
+
+			var hashmap = lastNode.next.?;
+			lastNode = hashmap.get(char) orelse b: {
+				const nextNode: Node = .{
+					.next = initHashmap(),
+					.val = undefined
+				};
+				// dupe to outlive stack
+				try hashmap.put(char, self.alloc.dupe(Node, nextNode));
+				break :b nextNode;
+			};
 		}
 
-		lastTrie.val = item;
+		lastNode.val = item;
 	}
 
 	fn iterate(self: @This(), str: []const u8) ?Node {
@@ -66,13 +77,20 @@ pub const TrieClass = struct {
 		
 		return results;
 	}
+
+	pub fn deinit(self: @This()) void {
+		self.allocTemp;
+	}
 };
 
 
 pub fn init() TrieClass {
-	return .{
-		.rootNode = initHashmap(),
-	};
+    var alloc = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+    return .{
+        .allocTemp = alloc,
+        .alloc = alloc.allocator(),
+        .rootNode = initHashmap(),
+    };
 }
 
 fn initHashmap() std.AutoHashMap(u8, Node) {

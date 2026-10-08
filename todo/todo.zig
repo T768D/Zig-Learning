@@ -130,7 +130,7 @@ fn parseInput(str: []const u8) !void {
 	.search => {
 		var iter = savedData.valueIterator();
 		while (iter.next()) |item| {
-			searchTrie.addItem(item);	
+			try searchTrie.addItem(item);
 		}
 
 		const searchItem = awaitInput();
