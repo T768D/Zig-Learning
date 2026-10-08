@@ -38,7 +38,7 @@ pub const Commands = enum {
 
 var arena: std.heap.ArenaAllocator = undefined;
 // hashmap because we need to access title when user enteres add/remove
-pub var savedData: std.StringHashMap(FileStructure) = undefined;
+pub var savedData: std.StringHashMap(*FileStructure) = undefined;
 
 var ioType: std.Io.Threaded = undefined;
 pub var IO: std.Io = undefined;

@@ -64,7 +64,9 @@ fn parseInput(str: []const u8) !void {
 
 	sw: switch (parseCommand(str)) {
 	.add => {
-		var appendingData: FileStructure = .{
+		const appendingData = try savedData.allocator.create(FileStructure);
+		appendingData.* = .{
+			// would this remain in stack and become invalid?
 			.title = "",
 			.priority = 0,
 			.notes = ""
@@ -82,6 +84,7 @@ fn parseInput(str: []const u8) !void {
 				continue;
 			};
 
+			// u8 is copied i think
 			appendingData.priority = convertedInt;
 			break;
 		}
@@ -89,9 +92,8 @@ fn parseInput(str: []const u8) !void {
 		std.debug.print("Input notes", .{});
 		appendingData.notes = awaitInput();
 
-		appendingData.title = try savedData.allocator.dupe(u8, appendingData.title);
-		appendingData.notes = try savedData.allocator.dupe(u8, appendingData.notes);
 		try savedData.put(appendingData.title, appendingData);
+		searchTrie.addItem(appendingData);
 	},
 
 	.delete, .remove => {
@@ -105,12 +107,15 @@ fn parseInput(str: []const u8) !void {
 			title = str[7..str.len];
 		}
 
-		if (savedData.remove(title)) {
-			std.debug.print("Removed {s} from the todo",.{title});
-		}
-		else {
+		const val = savedData.get(title) orelse {
 			std.debug.print("No todo with the name {s} exists", .{title});
-		}
+			return;
+		};
+		// title is val.title so it is destroyed when val is
+		savedData.allocator.destroy(val);
+		savedData.remove(title);
+
+		std.debug.print("Removed {s} from the todo",.{title});
 	},
 
 	.list => {
@@ -210,10 +215,10 @@ fn readSaved() !void {
 	defer json.deinit();
 
 	// *block makes the capture block mutable
-	for (json.value) |*block| {
-		block.title = try savedData.allocator.dupe(u8, block.title);
-		block.notes = try savedData.allocator.dupe(u8, block.notes);
-		try savedData.put(block.title, block.*);
+	for (json.value) |block| {
+		const newBlock: *FileStructure = try savedData.allocator.create(FileStructure);
+		newBlock.* = block;
+		try savedData.put(newBlock.title, newBlock);
 	}
 }
 
