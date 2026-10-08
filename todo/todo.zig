@@ -10,12 +10,10 @@ const removeNewLines = utils.removeNewLines;
 const consts = @import("consts.zig");
 const Commands = consts.Commands;
 const FileStructure = consts.FileStructure;
-const CommandDescription = consts.CommandDescription;
 const reader = &consts.reader.interface;
 const savedData = &consts.savedData;
 
 var searchTrie: @import("trie.zig").TrieClass = undefined;
-
 const initTrie = @import("trie.zig").init;
 
 
@@ -50,6 +48,7 @@ fn awaitInput() []const u8 {
 	return trimEnd(input);
 }
 
+
 // need the 1st var to be void because compiler doesnt like it
 fn sortAssit(_: void, A: FileStructure, B: FileStructure) bool {
 	return A.priority > B.priority;
@@ -63,6 +62,7 @@ fn parseInput(str: []const u8) !void {
 	clearConsole();
 
 	sw: switch (parseCommand(str)) {
+
 	.add => {
 		const appendingData = try savedData.allocator.create(FileStructure);
 		appendingData.* = .{
@@ -179,8 +179,8 @@ fn parseInput(str: []const u8) !void {
 	.save => writeSaved(),
 	// switch will return Commands.invalid for a invalid command, so i dont have to make a union so its less verbose
 	.invalid => std.debug.print("Invalid input", .{}),
-	}
 
+	}
 }
 
 
