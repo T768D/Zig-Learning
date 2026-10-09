@@ -65,15 +65,10 @@ fn parseInput(str: []const u8) !void {
 
 	.add => {
 		const appendingData = try savedData.allocator.create(FileStructure);
-		appendingData.* = .{
-			// would this remain in stack and become invalid?
-			.title = "",
-			.priority = 0,
-			.notes = ""
-		};
 
 		std.debug.print("Input the title", .{});
-		appendingData.title = removeNewLines(awaitInput());
+		const title = removeNewLines(awaitInput());
+		appendingData.title = try savedData.allocator.dupe(u8, title);
 
 		while (true) {
 			std.debug.print("Input the priority level", .{});
@@ -90,10 +85,11 @@ fn parseInput(str: []const u8) !void {
 		}
 
 		std.debug.print("Input notes", .{});
-		appendingData.notes = awaitInput();
+		const notes = awaitInput();
+		appendingData.notes = try savedData.allocator.dupe(u8, notes);
 
 		try savedData.put(appendingData.title, appendingData);
-		searchTrie.addItem(appendingData);
+		try searchTrie.addItem(appendingData);
 	},
 
 	.delete, .remove => {
@@ -113,21 +109,22 @@ fn parseInput(str: []const u8) !void {
 		};
 		// title is val.title so it is destroyed when val is
 		savedData.allocator.destroy(val);
-		savedData.remove(title);
+		// already checked if exists before
+		_ = savedData.remove(title);
 
 		std.debug.print("Removed {s} from the todo",.{title});
 	},
 
 	.list => {
 		var iter = savedData.valueIterator();
-		var order = try std.ArrayList(FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
+		var order = try std.ArrayList(*FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
 		defer order.deinit(std.heap.smp_allocator);
 
 		while (iter.next()) |item| {
 			try order.append(std.heap.smp_allocator, item.*);
 		}
 
-		std.mem.sort(FileStructure,order.items,{}, sortAssit);
+		std.mem.sort(*FileStructure,order.items,{}, sortAssitPointer);
 	
 		for (order.items) |item| {
 			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
@@ -137,7 +134,7 @@ fn parseInput(str: []const u8) !void {
 	.search => {
 		var iter = savedData.valueIterator();
 		while (iter.next()) |item| {
-			try searchTrie.addItem(item);
+			try searchTrie.addItem(item.*);
 		}
 
 		std.debug.print("Enter title to search for", .{});
@@ -216,8 +213,12 @@ fn readSaved() !void {
 
 	// *block makes the capture block mutable
 	for (json.value) |block| {
-		const newBlock: *FileStructure = try savedData.allocator.create(FileStructure);
-		newBlock.* = block;
+		// deep clone everything to be owned by savedData
+		const newBlock = try savedData.allocator.create(FileStructure);
+		newBlock.notes = try savedData.allocator.dupe(u8, block.notes);
+		newBlock.title = try savedData.allocator.dupe(u8, block.title);
+		newBlock.priority = block.priority;
+
 		try savedData.put(newBlock.title, newBlock);
 	}
 }
@@ -256,7 +257,7 @@ fn writeSaved() void {
 			std.heap.smp_allocator,
 			// needs {{ otherwise zig will think its format string
 			"{s}{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}",
-			.{ if (isFirst) "" else ",\n", block.title, block.priority, block.notes },
+			.{ if (isFirst) "" else ",\n", block.*.title, block.*.priority, block.*.notes },
 		) catch |err| {
 			std.debug.print("Failed to format json string\n {}", .{err});
 			return;
