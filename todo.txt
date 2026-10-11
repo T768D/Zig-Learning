@@ -1,4 +1,5 @@
 title and notes must have \'" escaped
+convert trie to radix tree
 add delete in trie
 implement func for cloning FileStructure easily
 implement binary format and settings for switching

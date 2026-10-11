@@ -55,15 +55,12 @@ pub const TrieClass = struct {
 	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
 		const lastNode = self.iterate(str) orelse return null;
 
-		var allocTemp = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
-		defer allocTemp.deinit();
-		const searchAlloc = allocTemp.allocator();
-
-		var stack = try std.ArrayList(*const Node).initCapacity(searchAlloc, 60);
+		var stack = try std.ArrayList(*const Node).initCapacity(std.heap.smp_allocator, 10);
+		defer stack.deinit();
 		stack.appendAssumeCapacity(lastNode);
 
 		// initialised with resultAlloc beacuse lives after func ends
-		var results = try std.ArrayList(*FileStructure).initCapacity(resultAlloc, 20);
+		var results = try std.ArrayList(*FileStructure).initCapacity(resultAlloc, 5);
 
 		// do depth first because shifting arr by 1 is o(n) each time
 		while (stack.pop()) |last| {
@@ -74,7 +71,7 @@ pub const TrieClass = struct {
 			var iter = last.next.?.valueIterator();
 			while (iter.next()) |block| {
 				// block might be stack memory, need to copy to resultAlloc?
-				try stack.append(searchAlloc, block.*);
+				try stack.append(std.heap.smp_allocator, block.*);
 			}
 		}
 		

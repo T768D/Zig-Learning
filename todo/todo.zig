@@ -145,10 +145,11 @@ fn parseInput(str: []const u8) !void {
 
 		std.debug.print("Enter title to search for", .{});
 		const searchItem = awaitInput();
+
 		var tempAlloc = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
 		defer tempAlloc.deinit();
-
 		const searchAlloc = tempAlloc.allocator();
+
 		const searchResult = searchTrie.search(searchItem, searchAlloc) catch |err| {
 			std.debug.print("Unable to search through trie\n {}", .{err});
 			break :sw;
