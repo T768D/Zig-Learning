@@ -14,6 +14,7 @@ const reader = &consts.reader.interface;
 const savedData = &consts.savedData;
 
 var searchTrie: @import("trie.zig").TrieClass = undefined;
+var trieInitialised = false;
 const initTrie = @import("trie.zig").init;
 
 
@@ -107,7 +108,9 @@ fn parseInput(str: []const u8) !void {
 			std.debug.print("No todo with the name {s} exists", .{title});
 			return;
 		};
-		// title is val.title so it is destroyed when val is
+		// title is val.title so it is destroyed when val.title is
+		savedData.allocator.free(val.title);
+		savedData.allocator.free(val.notes);
 		savedData.allocator.destroy(val);
 		// already checked if exists before
 		_ = savedData.remove(title);
@@ -132,9 +135,12 @@ fn parseInput(str: []const u8) !void {
 	},
 
 	.search => {
-		var iter = savedData.valueIterator();
-		while (iter.next()) |item| {
-			try searchTrie.addItem(item.*);
+		if (!trieInitialised) {
+			var iter = savedData.valueIterator();
+			while (iter.next()) |item| {
+				try searchTrie.addItem(item.*);
+			}
+			trieInitialised = true;
 		}
 
 		std.debug.print("Enter title to search for", .{});
@@ -186,7 +192,7 @@ fn readSaved() !void {
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
 	// reading doesnt need locks
-	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_write }) 
+	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_only }) 
 		catch |err| switch (err) {
 			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
 			else =>	return err
