@@ -44,3 +44,13 @@ pub fn removeNewLines(str: []const u8) []const u8 {
 
 	return mutstr;
 }
+
+pub fn escape(str: []u8) []const u8 {
+	for (str, 0..) |char, index| {
+		if (char == '"' or char == '\'' or char == '\\') {
+			str[index] = ' ';
+		}
+	}
+
+	return str;
+}

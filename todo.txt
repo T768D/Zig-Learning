@@ -4,3 +4,5 @@ add delete in trie
 implement func for cloning FileStructure easily
 implement binary format and settings for switching
 implement allocator that allows for individual, and freeing of all items
+
+build system for each project
