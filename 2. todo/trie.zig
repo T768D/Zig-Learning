@@ -56,7 +56,7 @@ pub const TrieClass = struct {
 		const lastNode = self.iterate(str) orelse return null;
 
 		var stack = try std.ArrayList(*const Node).initCapacity(std.heap.smp_allocator, 10);
-		defer stack.deinit();
+		defer stack.deinit(std.heap.smp_allocator);
 		stack.appendAssumeCapacity(lastNode);
 
 		// initialised with resultAlloc beacuse lives after func ends
