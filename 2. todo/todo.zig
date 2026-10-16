@@ -36,7 +36,7 @@ fn awaitInput() []const u8 {
 
 	std.debug.print("\n>",.{});
 
-	// this waits until \n is streamed into the buffer then executes, is blocking
+	// is blocking: waits until \n is entered into the buffer then executes
 	const input = reader.takeDelimiterExclusive('\n') catch |err| {
 		std.debug.print("Error when reading input buffer, {}", .{err});
 		return "";
@@ -108,12 +108,13 @@ fn parseInput(str: []const u8) !void {
 			std.debug.print("No todo with the name {s} exists", .{title});
 			return;
 		};
+		// already checked if exists before
+		// must remove BEFORE destryoing title
+		_ = savedData.remove(title);
 		// title is val.title so it is destroyed when val.title is
 		savedData.allocator.free(val.title);
 		savedData.allocator.free(val.notes);
 		savedData.allocator.destroy(val);
-		// already checked if exists before
-		_ = savedData.remove(title);
 
 		std.debug.print("Removed {s} from the todo",.{title});
 	},
@@ -130,7 +131,7 @@ fn parseInput(str: []const u8) !void {
 		std.mem.sort(*FileStructure,order.items,{}, sortAssitPointer);
 	
 		for (order.items) |item| {
-			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
+			std.debug.print("\n{s}  {d}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
 	},
 
