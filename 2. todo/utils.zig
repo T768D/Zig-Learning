@@ -45,9 +45,11 @@ pub fn removeNewLines(str: []const u8) []const u8 {
 	return mutstr;
 }
 
-pub fn escape(str: []u8) []const u8 {
+// returns consst so any mutation must be explicitly const casted
+// should i make it just escape it instead of just replacing it with a space
+pub fn escapeStr(str: []u8) []const u8 {
 	for (str, 0..) |char, index| {
-		if (char == '"' or char == '\'' or char == '\\') {
+		if (char == '"' or char == '\'' or char == '\\' or char == '\n') {
 			str[index] = ' ';
 		}
 	}

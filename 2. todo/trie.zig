@@ -9,8 +9,7 @@ const Node = struct {
 pub const TrieClass = struct {
 	rootNode: Node,
 	allocator: std.mem.Allocator,
-	
-	pub fn addItem(self: *@This(), item: *FileStructure) !void {
+	pub fn add(self: *@This(), item: *FileStructure) !void {
 		// dont want to make entire class mutable
 		var lastNode = &self.rootNode;
 

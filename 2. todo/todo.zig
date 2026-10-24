@@ -4,7 +4,7 @@ const utils = @import("utils.zig");
 const parseCommand = utils.parseCommand;
 const clearConsole = utils.clearConsole;
 const trimEnd = utils.trimEnd;
-const removeNewLines = utils.removeNewLines;
+const escapeStr = utils.escapeStr;
 
 // keeping IO under consts because would need to convert out of pointer anyways, not much typing saved
 const consts = @import("consts.zig");
@@ -68,7 +68,9 @@ fn parseInput(str: []const u8) !void {
 		const appendingData = try savedData.allocator.create(FileStructure);
 
 		std.debug.print("Input the title", .{});
-		const title = removeNewLines(awaitInput());
+		// needs escaping because of json format saving
+		// if implemented non json format then no need to escape
+		const title = escapeStr(@constCast(awaitInput()));
 		appendingData.title = try savedData.allocator.dupe(u8, title);
 
 		while (true) {
@@ -80,7 +82,7 @@ fn parseInput(str: []const u8) !void {
 				continue;
 			};
 
-			// u8 is copied i think
+			// u8 is copied
 			appendingData.priority = convertedInt;
 			break;
 		}
@@ -90,7 +92,7 @@ fn parseInput(str: []const u8) !void {
 		appendingData.notes = try savedData.allocator.dupe(u8, notes);
 
 		try savedData.put(appendingData.title, appendingData);
-		try searchTrie.addItem(appendingData);
+		try searchTrie.add(appendingData);
 	},
 
 	.delete, .remove => {
@@ -131,7 +133,7 @@ fn parseInput(str: []const u8) !void {
 		std.mem.sort(*FileStructure,order.items,{}, sortAssitPointer);
 	
 		for (order.items) |item| {
-			std.debug.print("\n{s}  {d}\n{s}\n\n", .{item.priority, item.title, item.notes});
+			std.debug.print("\n{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
 	},
 
@@ -139,7 +141,7 @@ fn parseInput(str: []const u8) !void {
 		if (!trieInitialised) {
 			var iter = savedData.valueIterator();
 			while (iter.next()) |item| {
-				try searchTrie.addItem(item.*);
+				try searchTrie.add(item.*);
 			}
 			trieInitialised = true;
 		}
@@ -164,7 +166,7 @@ fn parseInput(str: []const u8) !void {
 		std.mem.sort(*FileStructure,searchResult.?.items,{}, sortAssitPointer);
 	
 		for (searchResult.?.items) |item| {
-			std.debug.print("\n{d} {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
+			std.debug.print("\n{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
 	},
 
