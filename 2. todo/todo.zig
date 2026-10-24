@@ -1,4 +1,5 @@
 const std = @import("std");
+const generalHeapAlloc = @import("alloc.zig").generalHeapAlloc;
 
 const utils = @import("utils.zig");
 const parseCommand = utils.parseCommand;
@@ -20,7 +21,7 @@ const initTrie = @import("trie.zig").init;
 
 pub fn main() !void {
 	consts.init();
-	searchTrie = initTrie(std.heap.smp_allocator);
+	searchTrie = initTrie(generalHeapAlloc);
 
 	// cant be moved up or else therell be a random segfault
 	clearConsole();
@@ -123,11 +124,11 @@ fn parseInput(str: []const u8) !void {
 
 	.list => {
 		var iter = savedData.valueIterator();
-		var order = try std.ArrayList(*FileStructure).initCapacity(std.heap.smp_allocator, iter.len);
-		defer order.deinit(std.heap.smp_allocator);
+		var order = try std.ArrayList(*FileStructure).initCapacity(generalHeapAlloc, iter.len);
+		defer order.deinit(generalHeapAlloc);
 
 		while (iter.next()) |item| {
-			try order.append(std.heap.smp_allocator, item.*);
+			try order.append(generalHeapAlloc, item.*);
 		}
 
 		std.mem.sort(*FileStructure,order.items,{}, sortAssitPointer);
@@ -149,7 +150,7 @@ fn parseInput(str: []const u8) !void {
 		std.debug.print("Enter title to search for", .{});
 		const searchItem = awaitInput();
 
-		var tempAlloc = std.heap.ArenaAllocator.init(std.heap.smp_allocator);
+		var tempAlloc = std.heap.ArenaAllocator.init(generalHeapAlloc);
 		defer tempAlloc.deinit();
 		const searchAlloc = tempAlloc.allocator();
 
@@ -204,17 +205,17 @@ fn readSaved() !void {
 
 	var fileReader = file.reader(consts.IO, &.{});
 	const fileContents = fileReader.interface.allocRemaining(
-		std.heap.smp_allocator,
+		generalHeapAlloc,
 		.unlimited,
 	) catch |err| {
 		std.debug.print("Failed to read config file: {}", .{err});
 		std.process.exit(1);
 	};
-	defer std.heap.smp_allocator.free(fileContents);
+	defer generalHeapAlloc.free(fileContents);
 
 	// std.debug.print("File Contents: \n{s}\n\n", .{fileContents});
 
-	const json = std.json.parseFromSlice([]FileStructure, std.heap.smp_allocator, fileContents, .{}) catch |err| {
+	const json = std.json.parseFromSlice([]FileStructure, generalHeapAlloc, fileContents, .{}) catch |err| {
 		std.debug.print("Unable to parse json, defaulting to empty data. {}", .{err});
 		// initialised as a slice, need to give the actaul value
 		return;
@@ -264,7 +265,7 @@ fn writeSaved() void {
 	while (iter.next()) |block| {
 
 		const formatted = std.fmt.allocPrint(
-			std.heap.smp_allocator,
+			generalHeapAlloc,
 			// needs {{ otherwise zig will think its format string
 			"{s}{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}",
 			.{ if (isFirst) "" else ",\n", block.*.title, block.*.priority, block.*.notes },
@@ -272,7 +273,7 @@ fn writeSaved() void {
 			std.debug.print("Failed to format json string\n {}", .{err});
 			return;
 		};
-		defer std.heap.smp_allocator.free(formatted);
+		defer generalHeapAlloc.free(formatted);
 
 		writer.interface.writeAll(formatted) catch |err| {
 			std.debug.print("Failed to write block to config file: {}", .{err});
