@@ -17,6 +17,9 @@ var searchTrie: @import("trie.zig").TrieClass = undefined;
 var trieInitialised = false;
 const initTrie = @import("trie.zig").init;
 
+const readSaved = @import("storage.zig").readSaved;
+const writeSaved = @import("storage.zig").writeSaved;
+
 
 pub fn main() !void {
 	consts.init();
@@ -188,113 +191,4 @@ fn parseInput(str: []const u8) !void {
 	.invalid => std.debug.print("Invalid input", .{}),
 
 	}
-}
-
-
-fn readSaved() !void {
-
-	const cwd = std.Io.Dir.cwd();
-	// need the try to catch the error propogated from cwd.createFile in this catch block
-	// reading doesnt need locks
-	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_only }) 
-		catch |err| switch (err) {
-			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
-			else =>	return err
-		};
-
-	var fileReader = file.reader(consts.IO, &.{});
-	const fileContents = fileReader.interface.allocRemaining(
-		generalHeapAlloc,
-		.unlimited,
-	) catch |err| {
-		std.debug.print("Failed to read config file: {}", .{err});
-		std.process.exit(1);
-	};
-	defer generalHeapAlloc.free(fileContents);
-
-	// std.debug.print("File Contents: \n{s}\n\n", .{fileContents});
-
-	const json = std.json.parseFromSlice([]FileStructure, generalHeapAlloc, fileContents, .{}) catch |err| {
-		std.debug.print("Unable to parse json, defaulting to empty data. {}", .{err});
-		// initialised as a slice, need to give the actaul value
-		return;
-	};
-	defer json.deinit();
-
-	// *block makes the capture block mutable
-	for (json.value) |block| {
-		// deep clone everything to be owned by savedData
-		const newBlock = try savedData.allocator.create(FileStructure);
-		newBlock.notes = try savedData.allocator.dupe(u8, block.notes);
-		newBlock.title = try savedData.allocator.dupe(u8, block.title);
-		newBlock.priority = block.priority;
-
-		try savedData.put(newBlock.title, newBlock);
-	}
-}
-
-
-fn writeSaved() void {
-	const cwd = std.Io.Dir.cwd();
-
-	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .write_only, .lock = .exclusive })
-		catch |err| switch (err) {
-			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
-			else => {
-				std.debug.print("Unable to access file \n\n{}", .{err});
-				return;
-			}
-		};
-	// already locked when using openFile
-	defer file.unlock(consts.IO);
-
-	file.setLength(consts.IO, 0) catch |err| {
-		std.debug.print("Unable to set file length to 0, {}", .{err});
-	};
-
-	var writer = file.writer(consts.IO, &.{});
-	var iter = savedData.valueIterator();
-
-	writer.interface.writeByte('[') catch |err| {
-		std.debug.print("Failed to write initialiser to config file: {}", .{err});
-		return;
-	};
-
-	var isFirst = true;
-	while (iter.next()) |block| {
-
-		const formatted = std.fmt.allocPrint(
-			generalHeapAlloc,
-			// needs {{ otherwise zig will think its format string
-			"{s}{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}",
-			.{ if (isFirst) "" else ",\n", block.*.title, block.*.priority, block.*.notes },
-		) catch |err| {
-			std.debug.print("Failed to format json string\n {}", .{err});
-			return;
-		};
-		defer generalHeapAlloc.free(formatted);
-
-		writer.interface.writeAll(formatted) catch |err| {
-			std.debug.print("Failed to write block to config file: {}", .{err});
-			return;
-		};
-
-		isFirst = false;
-	}
-
-	writer.interface.writeByte(']') catch |err| {
-		std.debug.print("Failed to write initialiser to config file: {}", .{err});
-		return;
-	};
-
-
-	std.debug.print("Written to config file", .{});
-}
-
-
-fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
-	return cwd.createFile(consts.IO, "config.json", .{ .lock = .exclusive }) catch |err| {
-		std.debug.print("Unable to create config file in cwd, {}", .{err});
-		std.process.exit(1); // lazy fix
-	};
 }
