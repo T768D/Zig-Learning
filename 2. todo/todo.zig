@@ -7,9 +7,8 @@ const clearConsole = utils.clearConsole;
 const trimEnd = utils.trimEnd;
 const escapeStr = utils.escapeStr;
 
-// keeping IO under consts because would need to convert out of pointer anyways, not much typing saved
+// keep IO under consts because would need to convert out of pointer anyways, not much typing saved
 const consts = @import("consts.zig");
-const Commands = consts.Commands;
 const FileStructure = consts.FileStructure;
 const reader = &consts.reader.interface;
 const savedData = &consts.savedData;
@@ -174,8 +173,8 @@ fn parseInput(str: []const u8) !void {
 	.help => {
 		// std.meta.fields is comptime, therefore loop needs inlining
 		// std.meta.fields takes a comptime object and makes its data accessible
-		inline for (std.meta.fields(Commands)) |cmd| {
-			std.debug.print("{s}: {s}\n", .{cmd.name, @field(Commands, cmd.name).describe()});
+		inline for (std.meta.fields(consts.Commands)) |cmd| {
+			std.debug.print("{s}: {s}\n", .{cmd.name, @field(consts.Commands, cmd.name).describe()});
 		}
 	},
 
