@@ -55,8 +55,8 @@ pub const TrieClass = struct {
 	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
 		const lastNode = self.iterate(str) orelse return null;
 
-		var stack = try std.ArrayList(*const Node).initCapacity(std.heap.generalHeapAlloc, 10);
-		defer stack.deinit(std.heap.generalHeapAlloc);
+		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 10);
+		defer stack.deinit(generalHeapAlloc);
 		stack.appendAssumeCapacity(lastNode);
 
 		// initialised with resultAlloc beacuse lives after func ends
@@ -71,7 +71,7 @@ pub const TrieClass = struct {
 			var iter = last.next.?.valueIterator();
 			while (iter.next()) |block| {
 				// block might be stack memory, need to copy to resultAlloc?
-				try stack.append(std.heap.generalHeapAlloc, block.*);
+				try stack.append(generalHeapAlloc, block.*);
 			}
 		}
 		

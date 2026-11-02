@@ -3,9 +3,10 @@ pub const savedDataEnum = enum {
 	BINARY
 };
 
+const Config = struct {
+    savedDataType: savedDataEnum,
+};
 
-pub var config: struct {
-	savedDataType: savedDataEnum
-} = .{
-	.savedDataType = savedDataEnum.JSON
+pub var config: Config = .{
+    .savedDataType = .JSON,
 };

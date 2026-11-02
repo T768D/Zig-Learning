@@ -5,7 +5,7 @@ const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
 const savedData = &consts.savedData;
 
-const config = @import("config.zig").config;
+const config = &@import("config.zig").config;
 
 
 fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
@@ -16,12 +16,8 @@ fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
 }
 
 
-fn parseJSON(alloc: std.mem.Allocator, fileContents: []const u8) []FileStructure {
-	return std.json.parseFromSlice([]FileStructure, alloc, fileContents, .{});
-}
-
-fn parseBinary(alloc: std.mem.Allocator, fileContents: []const u8) []FileStructure {
-	
+fn parseJSON(alloc: std.mem.Allocator, fileContents: []const u8) !std.json.Parsed([]FileStructure) {
+	return try std.json.parseFromSlice([]FileStructure, alloc, fileContents, .{});
 }
 
 pub fn readSaved() !void {
