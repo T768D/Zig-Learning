@@ -1,6 +1,7 @@
+make backup before writing to binary, configurable in settings
+add settings
 add delete in trie
 convert trie to radix tree
-implement binary format and settings for switching
 make escape actually escape chars instead of replacing with space
 implement allocator that allows for individual, and freeing of all items
 

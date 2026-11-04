@@ -1,7 +1,7 @@
 [{
-    "title": "code",
-    "priority": 3,
-    "notes": "learn more zig"
+    "title": "Study",
+    "priority": 1,
+    "notes": "discreet math and ml"
 },
 {
     "title": "Buy groceries",
@@ -9,7 +9,7 @@
     "notes": "osfjf slkdjewois djccosdk jfls djsl k"
 },
 {
-    "title": "Study",
-    "priority": 1,
-    "notes": "discreet math and ml"
+    "title": "code",
+    "priority": 3,
+    "notes": "learn more zig"
 }]

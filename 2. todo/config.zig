@@ -8,5 +8,5 @@ const Config = struct {
 };
 
 pub var config: Config = .{
-    .savedDataType = .JSON,
+    .savedDataType = .BINARY,
 };

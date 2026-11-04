@@ -40,8 +40,8 @@ pub fn readSaved() !void {
 	};
 	defer generalHeapAlloc.free(fileContents);
 
-	const parseFunc = if (config.savedDataType == .JSON) parseJSON else parseBinary;
-	const parsed = parseFunc(generalHeapAlloc, fileContents) catch |err| {
+	// todo
+	const parsed = (if (config.savedDataType == .JSON) parseJSON(generalHeapAlloc, fileContents) else parseJSON(generalHeapAlloc, fileContents)) catch |err| {
 		std.debug.print("Unable to parse json, defaulting to empty data. {}", .{err});
 		// initialised as a slice, need to give the actaul value
 		return;
@@ -61,12 +61,12 @@ pub fn readSaved() !void {
 }
 
 
-fn formatJSON(writer: std.Io.File.Writer) ![]const u8 {
+fn formatJSON(writer: *std.Io.File.Writer) void {
 	var iter = savedData.valueIterator();
 	var isFirst = true;
 
 	writer.interface.writeByte('[') catch |err| {
-		std.debug.print("Failed to write initialiser to config file: {}", .{err});
+		std.debug.print("Failed to write initialiser to config file: {}\n", .{err});
 		return;
 	};
 
@@ -77,14 +77,14 @@ fn formatJSON(writer: std.Io.File.Writer) ![]const u8 {
 			"{s}{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}",
 			.{ if (isFirst) "" else ",\n", block.*.title, block.*.priority, block.*.notes },
 		) catch |err| {
-			std.debug.print("Failed to format block\n {}", .{err});
+			std.debug.print("Failed to format block\n {}\n", .{err});
 			return;
 		};
 		// could the allocation slot be reused? check .len of the 2 slices, and add the u16
 		defer generalHeapAlloc.free(formatted);
 
 		writer.interface.writeAll(formatted) catch |err| {
-			std.debug.print("Failed to write block to config file: {}", .{err});
+			std.debug.print("Failed to write block to config file: {}\n", .{err});
 			return;
 		};
 
@@ -92,7 +92,7 @@ fn formatJSON(writer: std.Io.File.Writer) ![]const u8 {
 	}
 
 	writer.interface.writeByte(']') catch |err| {
-		std.debug.print("Failed to write initialiser to config file: {}", .{err});
+		std.debug.print("Failed to write initialiser to config file: {}\n", .{err});
 		return;
 	};
 }
@@ -103,8 +103,58 @@ fn formatJSON(writer: std.Io.File.Writer) ![]const u8 {
 // at the end of the file state the amount of bytes a title takes up?
 // or state all the offsets of each sub block?
 // possible to read file backwards streaming?
-fn formatBinary(writer: std.Io.File.Writer) ![]const u8 {
 
+
+// 2 ways:
+// u16 block before each title and note
+// contiguous u16 block at the end
+
+fn formatBinary(writer: *std.Io.File.Writer) void {
+	var iter = savedData.valueIterator();
+	// this stores how many u8s are from the last offset
+	// u16 max is 65,535 so its plenty
+	// only title and notes have a offset, priority is always u16 in size
+	var offsets = std.ArrayList(u16).initCapacity(generalHeapAlloc, 10) catch |err| {
+		std.debug.print("Unable to create arraylist due to memory issues outside this programs control.\n{}", .{err});
+		return;
+	};
+
+	while (iter.next()) |block| {
+		var buffer = generalHeapAlloc.alloc(u8, block.*.title.len + block.*.notes.len + 2) catch |err| {
+			std.debug.print("Unable to create arraylist due to memory issues outside this programs control.\n{}", .{err});
+			return;
+		};
+		defer generalHeapAlloc.free(buffer);
+
+		const lowerPart: u8 = @truncate(block.*.priority);
+		const upperPart: u8 = @truncate(block.*.priority >> 8);
+		buffer[0] = lowerPart;
+		buffer[1] = upperPart;
+
+		const titleEnd = block.*.title.len + 2;
+		@memcpy(buffer[2..titleEnd], block.*.*.title);
+		@memcpy(buffer[titleEnd..], block.*.*.notes);
+
+		offsets.append(generalHeapAlloc, @intCast(block.*.notes.len)) catch |err| {
+			std.debug.print("Unable to append to arraylist due to memory issues outside this programs control.\n{}", .{err});
+			return;
+		};
+		offsets.append(generalHeapAlloc, @intCast(block.*.title.len)) catch |err| {
+			std.debug.print("Unable to append to arraylist due to memory issues outside this programs control.\n{}", .{err});
+			return;
+		};
+
+		writer.interface.writeAll(buffer) catch |err| {
+			std.debug.print("Failed to write block to config file:\n{}", .{err});
+			return;
+		};
+	}
+
+	writer.interface.writeSliceEndian(u16, offsets.items, .big) catch |err| {
+		std.debug.print("Failed to write offsets to end of file:\n{}", .{err});
+		return;
+	};
+	// +2 beacuse priority is u16 and this is u8
 }
 
 pub fn writeSaved() void {
@@ -125,7 +175,7 @@ pub fn writeSaved() void {
 	defer file.unlock(consts.IO);
 
 	file.setLength(consts.IO, 0) catch |err| {
-		std.debug.print("Unable to set file length to 0, {}", .{err});
+		std.debug.print("Unable to set file length to 0:\n{}", .{err});
 	};
 
 	var writer = file.writer(consts.IO, &.{});
