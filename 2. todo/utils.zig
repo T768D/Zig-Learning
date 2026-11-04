@@ -23,9 +23,10 @@ pub fn trimEnd(str: []const u8) []const u8 {
 }
 
 pub fn parseCommand(str: []const u8) Commands {
-	inline for (std.meta.fields(Commands)) |cmd| {
-        if (std.mem.startsWith(u8, str, cmd.name)) {
-            return @field(Commands, cmd.name);
+	const info = @typeInfo(Commands).@"enum";
+	inline for (info.field_names, info.field_values) |name, value| {
+        if (std.mem.startsWith(u8, str, name)) {
+            return @fromBackingInt(value);
         }
 	}
 

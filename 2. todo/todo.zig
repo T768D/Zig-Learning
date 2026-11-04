@@ -174,10 +174,10 @@ fn parseInput(str: []const u8) !void {
 	},
 
 	.help => {
-		// std.meta.fields is comptime, therefore loop needs inlining
-		// std.meta.fields takes a comptime object and makes its data accessible
-		inline for (std.meta.fields(consts.Commands)) |cmd| {
-			std.debug.print("{s}: {s}\n", .{cmd.name, @field(consts.Commands, cmd.name).describe()});
+		const info = @typeInfo(consts.Commands).@"enum";
+		inline for (info.field_names, info.field_values) |name, value| {
+			const convertedValue: consts.Commands = @fromBackingInt(value);
+			std.debug.print("{s}: {s}\n", .{name, convertedValue.describe()});
 		}
 	},
 
