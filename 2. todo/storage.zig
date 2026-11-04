@@ -97,18 +97,12 @@ fn formatJSON(writer: *std.Io.File.Writer) void {
 	};
 }
 
-// each sub block has a offset
-// eg 0015this is a title and 00015these are the notes
-// then how do you know when the number ends? fixed number?
-// at the end of the file state the amount of bytes a title takes up?
-// or state all the offsets of each sub block?
-// possible to read file backwards streaming?
 
-
-// 2 ways:
-// u16 block before each title and note
-// contiguous u16 block at the end
-
+// Structure:
+// data: [priority:u16, notes: []const u8, title: []const u8] repeated
+// offsets: [notesoffset: u16, titleoffset: u16] repeated
+// version: u16
+const storageVersion = 1;
 fn formatBinary(writer: *std.Io.File.Writer) void {
 	var iter = savedData.valueIterator();
 	// this stores how many u8s are from the last offset
@@ -154,7 +148,16 @@ fn formatBinary(writer: *std.Io.File.Writer) void {
 		std.debug.print("Failed to write offsets to end of file:\n{}", .{err});
 		return;
 	};
-	// +2 beacuse priority is u16 and this is u8
+
+	writer.interface.writeInt(u16, @intCast(offsets.items.len), .big) catch |err| {
+		std.debug.print("Failed to write number of offsets to end of file:\n{}", .{err});
+		return;
+	};
+
+	writer.interface.writeInt(u16, @intCast(storageVersion), .big) catch |err| {
+		std.debug.print("Failed to write number of offsets to end of file:\n{}", .{err});
+		return;
+	};
 }
 
 pub fn writeSaved() void {
