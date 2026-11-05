@@ -11,9 +11,9 @@ const awaitInput = @import("utils.zig").awaitInput;
 const clearConsole = @import("utils.zig").clearConsole;
 
 
-fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
-	return cwd.createFile(consts.IO, if (config.savedDataType == .JSON) "config.json" else "config.bin", .{ .lock = .exclusive }) catch |err| {
-		std.debug.print("Unable to create config file in cwd, {}", .{err});
+fn createStorageFile(cwd: std.Io.Dir) std.Io.File {
+	return cwd.createFile(consts.IO, if (config.savedDataType == .JSON) "storage.json" else "storage.bin", .{ .lock = .exclusive }) catch |err| {
+		std.debug.print("Unable to create storage file in cwd, {}", .{err});
 		std.process.exit(1);
 	};
 }
@@ -65,7 +65,7 @@ fn parseBinary(reader: *std.Io.Reader) !void {
 
 fn parseJSON(fileReader: *std.Io.Reader) !void {
 	const fileContents = fileReader.allocRemaining(generalHeapAlloc,.unlimited) catch |err| {
-		std.debug.print("Failed to read config file: {}", .{err});
+		std.debug.print("Failed to read storage file: {}", .{err});
 		return;
 	};
 	defer generalHeapAlloc.free(fileContents);
@@ -89,9 +89,9 @@ pub fn readSaved() !void {
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
 	// reading doesnt need locks
-	const file = cwd.openFile(consts.IO, if (config.savedDataType == .JSON) "config.json" else "config.bin", .{ .mode = .read_only })
+	const file = cwd.openFile(consts.IO, if (config.savedDataType == .JSON) "storage.json" else "storage.bin", .{ .mode = .read_only })
 		catch |err| switch (err) {
-			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
+			std.Io.File.OpenError.FileNotFound => createStorageFile(cwd),
 			else =>	return err
 		};
 
@@ -117,7 +117,7 @@ fn formatJSON(writer: *std.Io.Writer) void {
 	var isFirst = true;
 
 	writer.writeByte('[') catch |err| {
-		std.debug.print("Failed to write initialiser to config file: {}\n", .{err});
+		std.debug.print("Failed to write initialiser to storage file: {}\n", .{err});
 		return;
 	};
 
@@ -135,7 +135,7 @@ fn formatJSON(writer: *std.Io.Writer) void {
 		defer generalHeapAlloc.free(formatted);
 
 		writer.writeAll(formatted) catch |err| {
-			std.debug.print("Failed to write block to config file: {}\n", .{err});
+			std.debug.print("Failed to write block to storage file: {}\n", .{err});
 			return;
 		};
 
@@ -143,11 +143,11 @@ fn formatJSON(writer: *std.Io.Writer) void {
 	}
 
 	writer.writeByte(']') catch |err| {
-		std.debug.print("Failed to write initialiser to config file: {}\n", .{err});
+		std.debug.print("Failed to write initialiser to storage file: {}\n", .{err});
 		return;
 	};
 
-	std.debug.print("Written to config file", .{});
+	std.debug.print("Written to storage file", .{});
 }
 
 
@@ -173,7 +173,7 @@ fn formatBinary(writer: *std.Io.Writer) void {
 
 	while (iter.next()) |block| {
 		writer.writeInt(u16, block.*.priority, .big) catch |err| {
-			std.debug.print("Failed to write priority to config file:\n{}", .{err});
+			std.debug.print("Failed to write priority to storage file:\n{}", .{err});
 			return;
 		};
 
@@ -196,18 +196,18 @@ fn formatBinary(writer: *std.Io.Writer) void {
 		};
 	}
 
-	std.debug.print("Written to config file", .{});
+	std.debug.print("Written to storage file", .{});
 }
 
 pub fn writeSaved() void {
 	const cwd = std.Io.Dir.cwd();
 	const file = cwd.openFile(
 		consts.IO,
-		if (config.savedDataType == .JSON) "config.json" else "config",
+		if (config.savedDataType == .JSON) "storage.json" else "storage.bin",
 		.{ .mode = .write_only, .lock = .exclusive }
 	)
 		catch |err| switch (err) {
-			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
+			std.Io.File.OpenError.FileNotFound => createStorageFile(cwd),
 			else => {
 				std.debug.print("Unable to access file \n\n{}", .{err});
 				return;

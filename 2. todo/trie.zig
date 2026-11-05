@@ -10,6 +10,17 @@ const Node = struct {
 pub const TrieClass = struct {
 	rootNode: Node,
 	allocator: std.mem.Allocator,
+
+	// does not remove pointer from Node.next, you need to do it before this
+	fn freeNodeIfExist(self: *@This(), fileStructure: ?*FileStructure) !void {
+		if (fileStructure == null) {
+			return;
+		}
+		self.allocator.free(fileStructure.title);
+		self.allocator.free(fileStructure.notes);
+		self.allocator.free(fileStructure);
+	}
+	
 	pub fn add(self: *@This(), item: *FileStructure) !void {
 		// dont want to make entire class mutable
 		var lastNode = &self.rootNode;
@@ -38,8 +49,45 @@ pub const TrieClass = struct {
 		lastNode.val = item;
 	}
 
-	// pub fn delete(self: *@This(), item: *FileStructure) bool {
-	// }
+	pub fn delete(self: *@This(), item: *FileStructure) !bool {
+		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 10);
+		defer stack.deinit(generalHeapAlloc);
+
+		var lastNode = &self.rootNode;
+
+		for (item.title) |char| {
+			lastNode = lastNode.next.?.get(char) orelse return false;
+			try stack.append(generalHeapAlloc, lastNode);
+		}
+
+		// if search str is 0 or tree depth is 0, then stack will have len 0, and cause panic when popping stack (i think)
+		if (lastNode.val == null or stack.items.len == 0)  {
+			return false;
+		}
+
+		self.freeNodeIfExist(lastNode.val);
+		lastNode.val = null;
+
+		if (lastNode.next == null) {
+			return true;
+		}
+
+		var depth = stack.items.len - 1;
+		while (stack.pop()) |stackItem| {
+			// stops removing the leafs if it contains another child node, or it is a ending node
+			if (stackItem.val != null or stackItem.next.?.count() >= 2) {
+				return true;
+			}
+
+			const existed = stackItem.next.?.remove(item.title[depth]);
+			if (!existed) {
+				std.debug.print("Trie hashmap does not have char {c} for some reason", .{item.title[depth]});
+			}
+			depth -= 1;
+		}
+
+		return true;
+	}
 
 	fn iterate(self: *@This(), str: []const u8) ?*const Node {
 		var lastNode = &self.rootNode;
