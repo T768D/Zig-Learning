@@ -114,33 +114,26 @@ fn formatBinary(writer: *std.Io.Writer) void {
 	};
 
 	while (iter.next()) |block| {
-		var buffer = generalHeapAlloc.alloc(u8, block.*.title.len + block.*.notes.len + 2) catch |err| {
-			std.debug.print("Unable to create arraylist due to memory issues outside this programs control.\n{}", .{err});
+		writer.writeInt(u16, block.*.priority) catch |err| {
+			std.debug.print("Failed to write priority to config file:\n{}", .{err});
 			return;
 		};
-		defer generalHeapAlloc.free(buffer);
-
-		// cant i just write individually instead of assigning to buffer
-		const lowerPart: u8 = @truncate(block.*.priority);
-		const upperPart: u8 = @truncate(block.*.priority >> 8);
-		buffer[0] = lowerPart;
-		buffer[1] = upperPart;
-
-		const titleEnd = block.*.title.len + 2;
-		@memcpy(buffer[2..titleEnd], block.*.*.title);
-		@memcpy(buffer[titleEnd..], block.*.*.notes);
-
+		
 		offsets.append(generalHeapAlloc, @intCast(block.*.notes.len)) catch |err| {
 			std.debug.print("Unable to append to arraylist due to memory issues outside this programs control.\n{}", .{err});
 			return;
 		};
+		writer.writeAll(block.*.title) catch |err| {
+			std.debug.print("Failed to write title: '{s}' to file:\n{}", .{block.*.title, err});
+			return;
+		};
+
 		offsets.append(generalHeapAlloc, @intCast(block.*.title.len)) catch |err| {
 			std.debug.print("Unable to append to arraylist due to memory issues outside this programs control.\n{}", .{err});
 			return;
 		};
-
-		writer.writeAll(buffer) catch |err| {
-			std.debug.print("Failed to write block to config file:\n{}", .{err});
+		writer.writeAll(block.*.notes) catch |err| {
+			std.debug.print("Failed to write notes: '{s}' to file:\n{}", .{block.*.notes, err});
 			return;
 		};
 	}
