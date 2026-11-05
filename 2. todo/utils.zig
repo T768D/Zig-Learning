@@ -1,6 +1,8 @@
 const std = @import("std");
-const IO = &@import("consts.zig").IO;
+
 const Commands = @import("consts.zig").Commands;
+const IO = &@import("consts.zig").IO;
+const reader = &@import("consts.zig").reader.interface;
 
 
 pub fn clearConsole() void {
@@ -54,4 +56,18 @@ pub fn escapeStr(str: []u8) []const u8 {
 	}
 
 	return str;
+}
+
+pub fn awaitInput() []const u8 {
+
+	std.debug.print("\n>",.{});
+
+	// is blocking: waits until \n is entered into the buffer then executes
+	// takeDelimterExclusive does not advance current item pointer
+	const input = reader.takeDelimiter('\n') catch |err| {
+		std.debug.print("Error when reading input buffer, {}", .{err});
+		return "";
+	};
+
+	return trimEnd(input);
 }

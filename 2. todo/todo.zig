@@ -6,11 +6,11 @@ const parseCommand = utils.parseCommand;
 const clearConsole = utils.clearConsole;
 const trimEnd = utils.trimEnd;
 const escapeStr = utils.escapeStr;
+const awaitInput = utils.awaitInput;
 
 // keep IO under consts because would need to convert out of pointer anyways, not much typing saved
 const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
-const reader = &consts.reader.interface;
 const savedData = &consts.savedData;
 
 var searchTrie: @import("trie.zig").TrieClass = undefined;
@@ -35,32 +35,9 @@ pub fn main() !void {
 }
 
 
-fn awaitInput() []const u8 {
-
-	std.debug.print("\n>",.{});
-
-	// is blocking: waits until \n is entered into the buffer then executes
-	const input = reader.takeDelimiterExclusive('\n') catch |err| {
-		std.debug.print("Error when reading input buffer, {}", .{err});
-		return "";
-	};
-
-	// must toss the current input otherwise itll stay on the current \n in awaitInput
-	// and cause it to advance without user input
-	reader.toss(1);
-
-	return trimEnd(input);
-}
-
-
-// need the 1st var to be void because compiler doesnt like it
-fn sortAssit(_: void, A: FileStructure, B: FileStructure) bool {
-	return A.priority > B.priority;
-}
 fn sortAssitPointer(_: void, A: *FileStructure, B: *FileStructure) bool {
 	return A.priority > B.priority;
 }
-
 
 fn parseInput(str: []const u8) !void {
 	clearConsole();
