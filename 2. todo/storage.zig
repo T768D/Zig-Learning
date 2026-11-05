@@ -183,6 +183,8 @@ pub fn writeSaved() void {
 		formatBinary(&writer.interface);
 	}
 
-
-	std.debug.print("Written to config file", .{});
+	// writer.flush just calls to writer.interface.flush so same thing
+	writer.interface.flush() catch |err| {
+		std.debug.print("Unable to flush reamining information in write buffer:\n{}", .{err});
+	};
 }
