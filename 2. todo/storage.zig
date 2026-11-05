@@ -11,7 +11,7 @@ const config = &@import("config.zig").config;
 fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
 	return cwd.createFile(consts.IO, if (config.savedDataType == .JSON) "config.json" else "config.bin", .{ .lock = .exclusive }) catch |err| {
 		std.debug.print("Unable to create config file in cwd, {}", .{err});
-		std.process.exit(1); // 
+		std.process.exit(1);
 	};
 }
 
@@ -24,7 +24,7 @@ pub fn readSaved() !void {
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
 	// reading doesnt need locks
-	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_only }) 
+	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_only })
 		catch |err| switch (err) {
 			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
 			else =>	return err
@@ -157,8 +157,8 @@ fn formatBinary(writer: *std.Io.Writer) void {
 pub fn writeSaved() void {
 	const cwd = std.Io.Dir.cwd();
 	const file = cwd.openFile(
-		consts.IO, 
-		if (config.savedDataType == .JSON) "config.json" else "config", 
+		consts.IO,
+		if (config.savedDataType == .JSON) "config.json" else "config",
 		.{ .mode = .write_only, .lock = .exclusive }
 	)
 		catch |err| switch (err) {

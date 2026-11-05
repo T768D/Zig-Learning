@@ -5,7 +5,7 @@ const Commands = @import("consts.zig").Commands;
 
 pub fn clearConsole() void {
 	// \x1b[2J clears visible screen
-	// \x1b[3J clears scrollback history 
+	// \x1b[3J clears scrollback history
 	// \x1b[H moves cursor to top left
 	std.Io.File.stdout().writeStreamingAll(IO.*, "\x1b[3J\x1b[2J\x1b[H") catch {};
 }

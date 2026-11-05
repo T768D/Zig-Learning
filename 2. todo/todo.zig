@@ -134,7 +134,7 @@ fn parseInput(str: []const u8) !void {
 		}
 
 		std.mem.sort(*FileStructure,order.items,{}, sortAssitPointer);
-	
+
 		for (order.items) |item| {
 			std.debug.print("\n{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
@@ -167,7 +167,7 @@ fn parseInput(str: []const u8) !void {
 		}
 
 		std.mem.sort(*FileStructure,searchResult.?.items,{}, sortAssitPointer);
-	
+
 		for (searchResult.?.items) |item| {
 			std.debug.print("\n{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
