@@ -169,7 +169,8 @@ pub fn writeSaved() void {
 		std.debug.print("Unable to set file length to 0:\n{}", .{err});
 	};
 
-	var writer = file.writer(consts.IO, &.{});
+	var buffer: [1024]u8 = undefined;
+	var writer = file.writer(consts.IO, &buffer);
 	if (config.savedDataType == .JSON) {
 		formatJSON(&writer.interface);
 	}

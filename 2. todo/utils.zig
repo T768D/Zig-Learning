@@ -67,7 +67,7 @@ pub fn awaitInput() []const u8 {
 	const input = reader.takeDelimiter('\n') catch |err| {
 		std.debug.print("Error when reading input buffer, {}", .{err});
 		return "";
-	};
+	} orelse return "";
 
 	return trimEnd(input);
 }
