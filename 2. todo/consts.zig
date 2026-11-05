@@ -1,5 +1,4 @@
 const std = @import("std");
-const TrieClass = @import("trie.zig").TrieClass;
 
 
 // add, remove, list, complete
