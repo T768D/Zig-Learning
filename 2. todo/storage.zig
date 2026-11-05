@@ -95,32 +95,39 @@ fn formatJSON(writer: *std.Io.Writer) void {
 		std.debug.print("Failed to write initialiser to config file: {}\n", .{err});
 		return;
 	};
+
+	std.debug.print("Written to config file", .{});
 }
 
 
-// Structure:
-// data: [priority:u16, notes: []const u8, title: []const u8] repeated
-// offsets: [notesoffset: u16, titleoffset: u16] repeated
-// version: u16
-const storageVersion = 1;
+/// Structure:
+/// version: u8
+/// [priority:u16, notesOffset: u16, notes: []const u8, titleOffset: u16, title: []const u8] repeated
+const storageVersion: u8 = 1;
 fn formatBinary(writer: *std.Io.Writer) void {
 	var iter = savedData.valueIterator();
 	// this stores how many u8s are from the last offset
 	// u16 max is 65,535 so its plenty
 	// only title and notes have a offset, priority is always u16 in size
-	var offsets = std.ArrayList(u16).initCapacity(generalHeapAlloc, 10) catch |err| {
-		std.debug.print("Unable to create arraylist due to memory issues outside this programs control.\n{}", .{err});
+
+	// Sends bytes to the logical sink. A write will only be sent here if it
+    // could not fit into `buffer`, or during a `flush` operation.
+	// from zig docs
+	// so calling multiple write requests wont do anything
+
+	writer.writeByte(storageVersion) catch |err| {
+		std.debug.print("Failed to write number of offsets to end of file:\n{}", .{err});
 		return;
 	};
 
 	while (iter.next()) |block| {
-		writer.writeInt(u16, block.*.priority) catch |err| {
+		writer.writeInt(u16, block.*.priority, .big) catch |err| {
 			std.debug.print("Failed to write priority to config file:\n{}", .{err});
 			return;
 		};
-		
-		offsets.append(generalHeapAlloc, @intCast(block.*.notes.len)) catch |err| {
-			std.debug.print("Unable to append to arraylist due to memory issues outside this programs control.\n{}", .{err});
+
+		writer.writeInt(u16, @intCast(block.*.title.len), .big) catch |err| {
+			std.debug.print("Failed to write offset for title: '{s}' to file:\n{}", .{block.*.title, err});
 			return;
 		};
 		writer.writeAll(block.*.title) catch |err| {
@@ -128,8 +135,8 @@ fn formatBinary(writer: *std.Io.Writer) void {
 			return;
 		};
 
-		offsets.append(generalHeapAlloc, @intCast(block.*.title.len)) catch |err| {
-			std.debug.print("Unable to append to arraylist due to memory issues outside this programs control.\n{}", .{err});
+		writer.writeInt(u16, @intCast(block.*.notes.len), .big) catch |err| {
+			std.debug.print("Failed to write offset for note: '{s}' to file:\n{}", .{block.*.notes, err});
 			return;
 		};
 		writer.writeAll(block.*.notes) catch |err| {
@@ -138,20 +145,7 @@ fn formatBinary(writer: *std.Io.Writer) void {
 		};
 	}
 
-	writer.writeSliceEndian(u16, offsets.items, .big) catch |err| {
-		std.debug.print("Failed to write offsets to end of file:\n{}", .{err});
-		return;
-	};
-
-	writer.writeInt(u16, @intCast(offsets.items.len), .big) catch |err| {
-		std.debug.print("Failed to write number of offsets to end of file:\n{}", .{err});
-		return;
-	};
-
-	writer.writeInt(u16, @intCast(storageVersion), .big) catch |err| {
-		std.debug.print("Failed to write number of offsets to end of file:\n{}", .{err});
-		return;
-	};
+	std.debug.print("Written to config file", .{});
 }
 
 pub fn writeSaved() void {
