@@ -61,11 +61,11 @@ pub fn readSaved() !void {
 }
 
 
-fn formatJSON(writer: *std.Io.File.Writer) void {
+fn formatJSON(writer: *std.Io.Writer) void {
 	var iter = savedData.valueIterator();
 	var isFirst = true;
 
-	writer.interface.writeByte('[') catch |err| {
+	writer.writeByte('[') catch |err| {
 		std.debug.print("Failed to write initialiser to config file: {}\n", .{err});
 		return;
 	};
@@ -83,7 +83,7 @@ fn formatJSON(writer: *std.Io.File.Writer) void {
 		// could the allocation slot be reused? check .len of the 2 slices, and add the u16
 		defer generalHeapAlloc.free(formatted);
 
-		writer.interface.writeAll(formatted) catch |err| {
+		writer.writeAll(formatted) catch |err| {
 			std.debug.print("Failed to write block to config file: {}\n", .{err});
 			return;
 		};
@@ -91,7 +91,7 @@ fn formatJSON(writer: *std.Io.File.Writer) void {
 		isFirst = false;
 	}
 
-	writer.interface.writeByte(']') catch |err| {
+	writer.writeByte(']') catch |err| {
 		std.debug.print("Failed to write initialiser to config file: {}\n", .{err});
 		return;
 	};
@@ -103,7 +103,7 @@ fn formatJSON(writer: *std.Io.File.Writer) void {
 // offsets: [notesoffset: u16, titleoffset: u16] repeated
 // version: u16
 const storageVersion = 1;
-fn formatBinary(writer: *std.Io.File.Writer) void {
+fn formatBinary(writer: *std.Io.Writer) void {
 	var iter = savedData.valueIterator();
 	// this stores how many u8s are from the last offset
 	// u16 max is 65,535 so its plenty
@@ -120,6 +120,7 @@ fn formatBinary(writer: *std.Io.File.Writer) void {
 		};
 		defer generalHeapAlloc.free(buffer);
 
+		// cant i just write individually instead of assigning to buffer
 		const lowerPart: u8 = @truncate(block.*.priority);
 		const upperPart: u8 = @truncate(block.*.priority >> 8);
 		buffer[0] = lowerPart;
@@ -138,23 +139,23 @@ fn formatBinary(writer: *std.Io.File.Writer) void {
 			return;
 		};
 
-		writer.interface.writeAll(buffer) catch |err| {
+		writer.writeAll(buffer) catch |err| {
 			std.debug.print("Failed to write block to config file:\n{}", .{err});
 			return;
 		};
 	}
 
-	writer.interface.writeSliceEndian(u16, offsets.items, .big) catch |err| {
+	writer.writeSliceEndian(u16, offsets.items, .big) catch |err| {
 		std.debug.print("Failed to write offsets to end of file:\n{}", .{err});
 		return;
 	};
 
-	writer.interface.writeInt(u16, @intCast(offsets.items.len), .big) catch |err| {
+	writer.writeInt(u16, @intCast(offsets.items.len), .big) catch |err| {
 		std.debug.print("Failed to write number of offsets to end of file:\n{}", .{err});
 		return;
 	};
 
-	writer.interface.writeInt(u16, @intCast(storageVersion), .big) catch |err| {
+	writer.writeInt(u16, @intCast(storageVersion), .big) catch |err| {
 		std.debug.print("Failed to write number of offsets to end of file:\n{}", .{err});
 		return;
 	};
@@ -183,10 +184,10 @@ pub fn writeSaved() void {
 
 	var writer = file.writer(consts.IO, &.{});
 	if (config.savedDataType == .JSON) {
-		formatJSON(&writer);
+		formatJSON(&writer.interface);
 	}
 	else {
-		formatBinary(&writer);
+		formatBinary(&writer.interface);
 	}
 
 
