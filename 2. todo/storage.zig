@@ -1,11 +1,14 @@
 const std = @import("std");
 const generalHeapAlloc = @import("alloc.zig").generalHeapAlloc;
+const config = &@import("config.zig").config;
 
 const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
 const savedData = &consts.savedData;
+const consoleReader = &consts.reader.interface;
 
-const config = &@import("config.zig").config;
+const awaitInput = @import("utils.zig").awaitInput;
+const clearConsole = @import("utils.zig").clearConsole;
 
 
 fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
@@ -16,47 +19,95 @@ fn createConfigFile(cwd: std.Io.Dir) std.Io.File {
 }
 
 
-fn parseJSON(alloc: std.mem.Allocator, fileContents: []const u8) !std.json.Parsed([]FileStructure) {
-	return try std.json.parseFromSlice([]FileStructure, alloc, fileContents, .{});
+/// Structure:
+/// version: u8
+/// [priority:u16, notesOffset: u16, notes: []const u8, titleOffset: u16, title: []const u8] repeated
+fn parseBinary(reader: *std.Io.Reader) !void {
+	// instead of reading from buffer already in memory read streaming from file
+	const version = reader.takeByte() catch |err| {
+		std.debug.print("Unable to peek the first byte of the file, the version:\n{}",. {err});
+		return;
+	};
+
+	if (version != storageVersion) {
+		while (true) {
+			clearConsole();
+			std.debug.print("Storage version does not match the current program version, you can attempt to parse it but it may not work. Proceed? (Y/N)\n>", .{});
+			const input = try consoleReader.takeDelimiter('\n') orelse continue;
+
+			if (input[0] == 'y' or input[0] == 'Y') {
+				break;
+			}
+			else if (input[0] == 'n' or input[0] == 'N') {
+				std.debug.print("Saving aborted!\n", .{});
+				return;
+			}
+		}
+	}
+
+	while (reader.seek < reader.end) {
+		const block = try savedData.allocator.create(FileStructure);
+
+		const priorityBytes = try reader.takeArray(2);
+		block.priority = (@as(u16, priorityBytes[0]) << 8) | priorityBytes[1];
+
+		const titleBytes = try reader.takeArray(2);
+		const titleOffset = (@as(u16, titleBytes[0]) << 8) | titleBytes[1];
+		block.title = try savedData.allocator.dupe(u8, try reader.take(titleOffset));
+
+		const noteBytes = try reader.takeArray(2);
+		const noteOffset = (@as(u16, noteBytes[0]) << 8) | noteBytes[1];
+		block.notes = try savedData.allocator.dupe(u8, try reader.take(noteOffset));
+
+		try savedData.put(block.title, block);
+	}
 }
 
-pub fn readSaved() !void {
-	const cwd = std.Io.Dir.cwd();
-	// need the try to catch the error propogated from cwd.createFile in this catch block
-	// reading doesnt need locks
-	const file = cwd.openFile(consts.IO, "config.json", .{ .mode = .read_only })
-		catch |err| switch (err) {
-			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
-			else =>	return err
-		};
-
-	var fileReader = file.reader(consts.IO, &.{});
-	const fileContents = fileReader.interface.allocRemaining(
-		generalHeapAlloc,
-		.unlimited,
-	) catch |err| {
+fn parseJSON(fileReader: *std.Io.Reader) !void {
+	const fileContents = fileReader.allocRemaining(generalHeapAlloc,.unlimited) catch |err| {
 		std.debug.print("Failed to read config file: {}", .{err});
-		std.process.exit(1);
+		return;
 	};
 	defer generalHeapAlloc.free(fileContents);
 
-	// todo
-	const parsed = (if (config.savedDataType == .JSON) parseJSON(generalHeapAlloc, fileContents) else parseJSON(generalHeapAlloc, fileContents)) catch |err| {
-		std.debug.print("Unable to parse json, defaulting to empty data. {}", .{err});
-		// initialised as a slice, need to give the actaul value
-		return;
-	};
+	const parsed = try std.json.parseFromSlice([]FileStructure, generalHeapAlloc, fileContents, .{});
 	defer parsed.deinit();
 
 	// *block makes the capture block mutable
 	for (parsed.value) |block| {
 		// deep clone everything to be owned by savedData
 		const newBlock = try savedData.allocator.create(FileStructure);
-		newBlock.notes = try savedData.allocator.dupe(u8, block.notes);
 		newBlock.title = try savedData.allocator.dupe(u8, block.title);
+		newBlock.notes = try savedData.allocator.dupe(u8, block.notes);
 		newBlock.priority = block.priority;
 
 		try savedData.put(newBlock.title, newBlock);
+	}
+}
+
+pub fn readSaved() !void {
+	const cwd = std.Io.Dir.cwd();
+	// need the try to catch the error propogated from cwd.createFile in this catch block
+	// reading doesnt need locks
+	const file = cwd.openFile(consts.IO, if (config.savedDataType == .JSON) "config.json" else "config.bin", .{ .mode = .read_only })
+		catch |err| switch (err) {
+			std.Io.File.OpenError.FileNotFound => createConfigFile(cwd),
+			else =>	return err
+		};
+
+	var buffer: [4096]u8 = undefined;
+	var fileReader = file.reader(consts.IO, &buffer);
+
+	if (config.savedDataType == .JSON) {
+		parseJSON(&fileReader.interface) catch |err| {
+			std.debug.print("Unable to parse json file:\n{}", .{err});
+		};
+	}
+	else {
+		parseBinary(&fileReader.interface) catch |err| {
+			// all uncaught errors are due from reader interface
+			std.debug.print("Unable to read from file:\n{}", .{err});
+		};
 	}
 }
 
