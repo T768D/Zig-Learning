@@ -200,21 +200,42 @@ fn formatBinary(writer: *std.Io.Writer) void {
 }
 
 pub fn writeSaved() void {
+	const storagePath = if (config.savedDataType == .JSON) "storage.json" else "storage.bin";
+	const backupPath = if (config.savedDataType == .JSON) "storage_backup.json" else "storage_backup.bin";
+
 	const cwd = std.Io.Dir.cwd();
 	const file = cwd.openFile(
 		consts.IO,
-		if (config.savedDataType == .JSON) "storage.json" else "storage.bin",
+		storagePath,
 		.{ .mode = .write_only, .lock = .exclusive }
 	)
 		catch |err| switch (err) {
-			std.Io.File.OpenError.FileNotFound => createStorageFile(cwd),
+			std.Io.File.OpenError.FileNotFound => 
+				// cwd.createFile is sent to file varaible if no errors
+				cwd.createFile(consts.IO, storagePath, .{ .lock = .exclusive }) catch |err2| {
+					std.debug.print("Unable to create storage file in cwd:\n{}\n", .{err2});
+					return;
+				}
+			,
 			else => {
-				std.debug.print("Unable to access file \n\n{}", .{err});
+				std.debug.print("Unable to access file:\n{}\n", .{err});
 				return;
 			}
 		};
 	// already locked when using openFile
 	defer file.unlock(consts.IO);
+
+	// file already created if not exists
+	if (
+		config.backupBeforeSave == .ALL or
+		(config.backupBeforeSave == .JSON and config.savedDataType == .JSON) or
+		(config.backupBeforeSave == .BINARY and config.savedDataType == .BINARY)
+	) {
+		cwd.copyFile(storagePath, backupPath) catch |err| {
+			std.debug.print("Unable to create a backup of the config file:\n{}", .{err});
+			return;
+		};
+	}
 
 	file.setLength(consts.IO, 0) catch |err| {
 		std.debug.print("Unable to set file length to 0:\n{}", .{err});
@@ -232,5 +253,10 @@ pub fn writeSaved() void {
 	// writer.flush just calls to writer.interface.flush so same thing
 	writer.interface.flush() catch |err| {
 		std.debug.print("Unable to flush reamining information in write buffer:\n{}", .{err});
+		return;
 	};
+
+	if (config.deleteBackupIfNoErr) {
+		cwd.deleteFile(consts.IO, backupPath);
+	}
 }
