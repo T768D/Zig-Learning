@@ -231,7 +231,7 @@ pub fn writeSaved() void {
 		(config.backupBeforeSave == .JSON and config.savedDataType == .JSON) or
 		(config.backupBeforeSave == .BINARY and config.savedDataType == .BINARY)
 	) {
-		cwd.copyFile(storagePath, backupPath) catch |err| {
+		cwd.copyFile(storagePath, cwd, backupPath, consts.IO, .{}) catch |err| {
 			std.debug.print("Unable to create a backup of the config file:\n{}", .{err});
 			return;
 		};
@@ -257,6 +257,11 @@ pub fn writeSaved() void {
 	};
 
 	if (config.deleteBackupIfNoErr) {
-		cwd.deleteFile(consts.IO, backupPath);
+		cwd.deleteFile(consts.IO, backupPath) catch |err| {
+			if (err != std.Io.File.OpenError.FileNotFound) {
+				std.debug.print("Unable to delete backup file:\n{}", .{err});
+				return;
+			}
+		};
 	}
 }

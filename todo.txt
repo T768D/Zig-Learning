@@ -1,4 +1,3 @@
-make backup before writing to binary, configurable in settings
 add settings
 read from and save to differnt configs
 add delete in trie
@@ -7,3 +6,5 @@ make escape actually escape chars instead of replacing with space
 implement allocator that allows for individual, and freeing of all items
 
 generic build system for quick building
+
+https://knotsui.com/docs/tutorial
