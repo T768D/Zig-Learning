@@ -15,6 +15,7 @@ pub const Commands = enum {
 	delete, remove,
 	list,
 	search,
+	config,
 	save,
 	cls, exit,
 	invalid,
@@ -26,6 +27,7 @@ pub const Commands = enum {
 			.delete, .remove => "Deletes a item from the todo list. This command can accept the item name as a param",
 			.list => "Lists all the items in the todo list",
 			.search => "Searches the todo list based on user input",
+			.config => "Modifies the settings for this program",
 			.save => "Saves the todo list",
 			.cls, .exit => "Exits the program",
 			// adding a return union was too verbose

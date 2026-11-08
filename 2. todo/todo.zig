@@ -12,6 +12,7 @@ const awaitInput = utils.awaitInput;
 const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
 const savedData = &consts.savedData;
+const Config = @import("config.zig");
 
 var searchTrie: @import("trie.zig").TrieClass = undefined;
 var trieInitialised = false;
@@ -57,6 +58,7 @@ fn parseInput(str: []const u8) !void {
 			std.debug.print("Input the priority level", .{});
 			const priority = awaitInput();
 
+			// could be done simpler
 			const convertedInt = std.fmt.parseInt(u8, priority, 10) catch {
 				std.debug.print("Input is not a number or is too big!\n", .{});
 				continue;
@@ -74,6 +76,7 @@ fn parseInput(str: []const u8) !void {
 		try savedData.put(appendingData.title, appendingData);
 		try searchTrie.add(appendingData);
 	},
+
 
 	.delete, .remove => {
 		var title: []const u8 = undefined;
@@ -101,6 +104,7 @@ fn parseInput(str: []const u8) !void {
 		std.debug.print("Removed {s} from the todo",.{title});
 	},
 
+
 	.list => {
 		var iter = savedData.valueIterator();
 		var order = try std.ArrayList(*FileStructure).initCapacity(generalHeapAlloc, iter.len);
@@ -116,6 +120,59 @@ fn parseInput(str: []const u8) !void {
 			std.debug.print("\n{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
 	},
+
+
+	// simplify and clean up later
+	.config => {
+		std.debug.print("Choose a config to change:", .{});
+		for (Config.configHumanReadable.nameArr, 0..) |nameItem, index| {
+			std.debug.print("\n{d}: {s}", .{index, nameItem});
+		}
+
+		const input = awaitInput();
+		if (
+			input.len > 2 or
+			(input[0] < '0' and input[0] > '9') or
+			(input.len == 2 and input[1] < '0' and input[1] > '9')
+		) {
+			clearConsole();
+			std.debug.print("Invalid input!", .{});
+			break :sw;
+		}
+
+		const num = if (input.len == 1) input[0] - '0' else (input[0] - '0') * 10 + (input[1] - '0');
+		if (num >= Config.configHumanReadable.nameArr.len) {
+			std.debug.print("Number is too large", .{});
+			break :sw;
+		}
+
+		
+		clearConsole();
+		std.debug.print("Modifying: {s}\n", .{Config.configHumanReadable.nameArr[num]});
+		for (Config.configHumanReadable.valueArr[num], 0..) |nameItem, index| {
+			std.debug.print("\n{d}: {s}", .{index, nameItem});
+		}
+
+		const input2 = awaitInput();
+		if (
+			input2.len > 2 or
+			(input2[0] < '0' and input2[0] > '9') or
+			(input2.len == 2 and input2[1] < '0' and input2[1] > '9')
+		) {
+			clearConsole();
+			std.debug.print("Invalid input!", .{});
+			break :sw;
+		}
+
+		const num2 = if (input2.len == 1) input[0] - '0' else (input2[0] - '0') * 10 + (input2[1] - '0');
+		if (num2 >= Config.configHumanReadable.valueArr[num].len) {
+			std.debug.print("Number is too large", .{});
+			break :sw;
+		}
+
+		std.debug.print("temp {s}", .{Config.configHumanReadable.valueArr[num][num2]});
+	},
+
 
 	.search => {
 		if (!trieInitialised) {

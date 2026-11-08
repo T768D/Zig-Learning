@@ -1,5 +1,11 @@
-add settings
-read from and save to differnt configs
+simplify and clean up config switch
+make config generator title case
+clean up code
+make settings change stuff
+fix entering i makes number too large instead of invalid input
+better awaitinput with constraints
+
+read from and save to differnt configs (option when running config command)
 add delete in trie
 convert trie to radix tree
 make escape actually escape chars instead of replacing with space
