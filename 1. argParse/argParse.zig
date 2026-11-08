@@ -97,7 +97,7 @@ pub fn main() !void {
 
 	try argsMap.put(argParam.items, argValue.items);
 
-	std.debug.print("---- Hashmap printing ----\n\n", .{});
+	std.debug.print("---- Hashmap ----\n\n", .{});
 	var iter = argsMap.iterator();
 	while (iter.next()) |item| {
 		std.debug.print("{s} : {s}\n", .{item.key_ptr.*, item.value_ptr.*});
