@@ -14,8 +14,7 @@ const backupBeforeSaveEnum = enum {
 	ALL
 };
 
-
-const Config = struct {
+pub const Config = struct {
     savedDataType: savedDataEnum,
 	backupBeforeSave: backupBeforeSaveEnum,
 	deleteBackupIfNoErr: bool,
@@ -27,15 +26,22 @@ pub var config: Config = .{
 	.deleteBackupIfNoErr = true
 };
 
+pub fn mutateFieldFromIndex(index: usize, value: usize) void {
+    switch (index) {
+        0 => config.savedDataType = @fromBackingInt(@intCast(value)),
+        1 => config.backupBeforeSave = @fromBackingInt(@intCast(value)),
+        2 => config.deleteBackupIfNoErr = value == 0, // true comes first
+        else => @panic("Invalid struct index"),
+    }
+}
 
-// generate names for each config
-// for each config enum generate the names of them and store in arr where index is the name
-// display array and let user choose index, assinging it to struct
 
-// return type is 2 arrays linked by index, one is name, another is options
-// enums here are assumed to have their order the same as their value
 // needs less nesting!
 // add convert to title case
+
+// Compile time function that gets the names and names of the values of the configs and returns them
+// Array index correlates names and values
+// a hashmap is probably a better choice but comptime sounds interesting
 inline fn getReadable() struct {
 	nameArr: []const []const u8,
 	valueArr: []const []const []const u8,

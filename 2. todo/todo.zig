@@ -172,7 +172,9 @@ fn parseInput(str: []const u8) !void {
 			break :sw;
 		}
 
-		std.debug.print("temp {s}", .{Config.configHumanReadable.valueArr[num][num2]});
+		Config.mutateFieldFromIndex(num, num2);
+		// improve message
+		std.debug.print("Assigned {s}", .{Config.configHumanReadable.valueArr[num][num2]});
 	},
 
 
