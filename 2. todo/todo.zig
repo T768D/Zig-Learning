@@ -125,15 +125,16 @@ fn parseInput(str: []const u8) !void {
 	// simplify and clean up later
 	.config => {
 		std.debug.print("Choose a config to change:", .{});
-		for (Config.configHumanReadable.nameArr, 0..) |nameItem, index| {
-			std.debug.print("\n{d}: {s}", .{index, nameItem});
+		inline for (Config.configHumanReadable.nameArr, @typeInfo(Config.Config).@"struct".field_names, 0..,) |display_name, field_name, index| {
+			std.debug.print("\n{d}: {s}: {any}", .{index, display_name, @field(Config.config, field_name)});
 		}
 
 		const input = awaitInput();
 		if (
 			input.len > 2 or
-			(input[0] < '0' and input[0] > '9') or
-			(input.len == 2 and input[1] < '0' and input[1] > '9')
+			input[0] < '0' or 
+			input[0] > '9' or
+			(input.len == 2 and (input[1] < '0' or input[1] > '9'))
 		) {
 			clearConsole();
 			std.debug.print("Invalid input!", .{});
@@ -156,15 +157,16 @@ fn parseInput(str: []const u8) !void {
 		const input2 = awaitInput();
 		if (
 			input2.len > 2 or
-			(input2[0] < '0' and input2[0] > '9') or
-			(input2.len == 2 and input2[1] < '0' and input2[1] > '9')
+			input2[0] < '0' or 
+			input2[0] > '9' or
+			(input2.len == 2 and (input2[1] < '0' or input2[1] > '9'))
 		) {
 			clearConsole();
 			std.debug.print("Invalid input!", .{});
 			break :sw;
 		}
 
-		const num2 = if (input2.len == 1) input[0] - '0' else (input2[0] - '0') * 10 + (input2[1] - '0');
+		const num2 = if (input2.len == 1) input2[0] - '0' else (input2[0] - '0') * 10 + (input2[1] - '0');
 		if (num2 >= Config.configHumanReadable.valueArr[num].len) {
 			std.debug.print("Number is too large", .{});
 			break :sw;
