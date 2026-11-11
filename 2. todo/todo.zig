@@ -51,7 +51,7 @@ fn parseInput(str: []const u8) !void {
 		std.debug.print("Input the title", .{});
 		// needs escaping because of json format saving
 		// if implemented non json format then no need to escape
-		const title = escapeStr(@constCast(awaitInput()));
+		const title = escapeStr(awaitInput());
 		appendingData.title = try savedData.allocator.dupe(u8, title);
 
 		while (true) {
@@ -212,6 +212,7 @@ fn parseInput(str: []const u8) !void {
 		}
 	},
 
+
 	.help => {
 		const info = @typeInfo(consts.Commands).@"enum";
 		inline for (info.field_names, info.field_values) |name, value| {
@@ -226,6 +227,7 @@ fn parseInput(str: []const u8) !void {
 	},
 
 	.save => writeSaved(),
+
 	// switch will return Commands.invalid for a invalid command, so i dont have to make a union so its less verbose
 	.invalid => std.debug.print("Invalid input", .{}),
 

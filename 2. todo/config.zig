@@ -77,7 +77,6 @@ inline fn getReadable() struct {
 
 			else => unreachable
 		}
-
 	}
 
 	const nonComptimeNameArr = nameArr;

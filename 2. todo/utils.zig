@@ -13,7 +13,7 @@ pub fn clearConsole() void {
 	std.debug.print("Zigdo CLI\n\n", .{});
 }
 
-pub fn trimEnd(str: []const u8) []const u8 {
+pub fn trimEnd(str: []u8) []u8 {
 	if (str.len == 0)
 		return str;
 
@@ -49,7 +49,7 @@ pub fn removeNewLines(str: []u8) []const u8 {
 
 // returns consst so any mutation must be explicitly const casted
 // should i make it just escape it instead of just replacing it with a space
-pub fn escapeStr(str: []u8) []const u8 {
+pub fn escapeStr(str: []u8) []u8 {
 	for (str, 0..) |char, index| {
 		if (char == '"' or char == '\'' or char == '\\' or char == '\n') {
 			str[index] = ' ';
@@ -59,8 +59,8 @@ pub fn escapeStr(str: []u8) []const u8 {
 	return str;
 }
 
-pub fn awaitInput() []const u8 {
-
+// slice returned is one directly to reader buffer, clone if it needs long life
+pub fn awaitInput() []u8 {
 	std.debug.print("\n>",.{});
 
 	// is blocking: waits until \n is entered into the buffer then executes
