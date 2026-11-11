@@ -117,7 +117,7 @@ fn parseInput(str: []const u8) !void {
 		std.mem.sort(*FileStructure,order.items,{}, sortAssitPointer);
 
 		for (order.items) |item| {
-			std.debug.print("\n{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
+			std.debug.print("{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
 		}
 	},
 
@@ -132,7 +132,7 @@ fn parseInput(str: []const u8) !void {
 		const input = awaitInput();
 		if (
 			input.len > 2 or
-			input[0] < '0' or 
+			input[0] < '0' or
 			input[0] > '9' or
 			(input.len == 2 and (input[1] < '0' or input[1] > '9'))
 		) {
@@ -147,17 +147,18 @@ fn parseInput(str: []const u8) !void {
 			break :sw;
 		}
 
-		
+
 		clearConsole();
 		std.debug.print("Modifying: {s}\n", .{Config.configHumanReadable.nameArr[num]});
 		for (Config.configHumanReadable.valueArr[num], 0..) |nameItem, index| {
 			std.debug.print("\n{d}: {s}", .{index, nameItem});
 		}
 
+
 		const input2 = awaitInput();
 		if (
 			input2.len > 2 or
-			input2[0] < '0' or 
+			input2[0] < '0' or
 			input2[0] > '9' or
 			(input2.len == 2 and (input2[1] < '0' or input2[1] > '9'))
 		) {
