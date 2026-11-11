@@ -40,7 +40,7 @@ fn sortAssitPointer(_: void, A: *FileStructure, B: *FileStructure) bool {
 	return A.priority > B.priority;
 }
 
-fn parseInput(str: []const u8) !void {
+fn parseInput(str: []u8) !void {
 	clearConsole();
 
 	sw: switch (parseCommand(str)) {
@@ -80,7 +80,9 @@ fn parseInput(str: []const u8) !void {
 
 	.delete, .remove => {
 		var title: []const u8 = undefined;
-
+		
+		// delete and remove are the same len, so if command only has that then ask for name
+		// otherwise assume name passed as arg
 		if (str.len <= 6) {
 			std.debug.print("Input title", .{});
 			title = awaitInput();
@@ -226,7 +228,28 @@ fn parseInput(str: []const u8) !void {
 		std.process.exit(0);
 	},
 
-	.save => writeSaved(),
+	.save => {
+		if (str.len <= 4) {
+			writeSaved(null);
+			return;
+		}
+
+		// 4 chars for save and 1 for space
+		var arg = str[5..];
+		for (arg, 0..) |char, x| {
+			arg[x] = std.ascii.toLower(char);
+		}
+
+		std.debug.print("arg, '{s}'", .{arg});
+
+		// binary length is 6 lens
+		if (arg.len <= 6 and std.mem.startsWith(u8, arg, "bin")) {
+			writeSaved(.BINARY);
+		}
+		else if (std.mem.eql(u8, arg, "json")) {
+			writeSaved(.JSON);
+		}
+	},
 
 	// switch will return Commands.invalid for a invalid command, so i dont have to make a union so its less verbose
 	.invalid => std.debug.print("Invalid input", .{}),

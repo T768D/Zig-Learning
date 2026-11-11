@@ -1,6 +1,7 @@
 const std = @import("std");
 const generalHeapAlloc = @import("alloc.zig").generalHeapAlloc;
 const config = &@import("config.zig").config;
+const savedDataEnum = @import("config.zig").savedDataEnum;
 
 const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
@@ -147,7 +148,7 @@ fn formatJSON(writer: *std.Io.Writer) void {
 		return;
 	};
 
-	std.debug.print("Written to storage file", .{});
+	std.debug.print("Written to JSON storage file", .{});
 }
 
 
@@ -196,12 +197,14 @@ fn formatBinary(writer: *std.Io.Writer) void {
 		};
 	}
 
-	std.debug.print("Written to storage file", .{});
+	std.debug.print("Written to binary storage file", .{});
 }
 
-pub fn writeSaved() void {
-	const storagePath = if (config.savedDataType == .JSON) "storage.json" else "storage.bin";
-	const backupPath = if (config.savedDataType == .JSON) "storage_backup.json" else "storage_backup.bin";
+pub fn writeSaved(override: ?savedDataEnum) void {
+	const savedDataType = override orelse config.savedDataType;
+
+	const storagePath = if (savedDataType == .JSON) "storage.json" else "storage.bin";
+	const backupPath = if (savedDataType == .JSON) "storage_backup.json" else "storage_backup.bin";
 
 	const cwd = std.Io.Dir.cwd();
 	const file = cwd.openFile(
@@ -228,8 +231,8 @@ pub fn writeSaved() void {
 	// file already created if not exists
 	if (
 		config.backupBeforeSave == .ALL or
-		(config.backupBeforeSave == .JSON and config.savedDataType == .JSON) or
-		(config.backupBeforeSave == .BINARY and config.savedDataType == .BINARY)
+		(config.backupBeforeSave == .JSON and savedDataType == .JSON) or
+		(config.backupBeforeSave == .BINARY and savedDataType == .BINARY)
 	) {
 		cwd.copyFile(storagePath, cwd, backupPath, consts.IO, .{}) catch |err| {
 			std.debug.print("Unable to create a backup of the config file:\n{}", .{err});
@@ -243,7 +246,7 @@ pub fn writeSaved() void {
 
 	var buffer: [1024]u8 = undefined;
 	var writer = file.writer(consts.IO, &buffer);
-	if (config.savedDataType == .JSON) {
+	if (savedDataType == .JSON) {
 		formatJSON(&writer.interface);
 	}
 	else {

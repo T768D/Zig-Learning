@@ -1,7 +1,8 @@
 make config generator title case
-clean up code
 
-read from and save to differnt configs (option when running config command)
+
+rename saveData to smth else
+add load data from config command, option for different config
 add delete in trie
 convert trie to radix tree
 make escape actually escape chars instead of replacing with space
