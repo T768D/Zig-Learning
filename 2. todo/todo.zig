@@ -11,7 +11,7 @@ const awaitInput = utils.awaitInput;
 // keep IO under consts because would need to convert out of pointer anyways, not much typing saved
 const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
-const savedData = &consts.savedData;
+const currentData = &consts.currentData;
 const Config = @import("config.zig");
 
 var searchTrie: @import("trie.zig").TrieClass = undefined;
@@ -46,13 +46,13 @@ fn parseInput(str: []u8) !void {
 	sw: switch (parseCommand(str)) {
 
 	.add => {
-		const appendingData = try savedData.allocator.create(FileStructure);
+		const appendingData = try currentData.allocator.create(FileStructure);
 
 		std.debug.print("Input the title", .{});
 		// needs escaping because of json format saving
 		// if implemented non json format then no need to escape
 		const title = escapeStr(awaitInput());
-		appendingData.title = try savedData.allocator.dupe(u8, title);
+		appendingData.title = try currentData.allocator.dupe(u8, title);
 
 		while (true) {
 			std.debug.print("Input the priority level", .{});
@@ -71,9 +71,9 @@ fn parseInput(str: []u8) !void {
 
 		std.debug.print("Input notes", .{});
 		const notes = awaitInput();
-		appendingData.notes = try savedData.allocator.dupe(u8, notes);
+		appendingData.notes = try currentData.allocator.dupe(u8, notes);
 
-		try savedData.put(appendingData.title, appendingData);
+		try currentData.put(appendingData.title, appendingData);
 		try searchTrie.add(appendingData);
 	},
 
@@ -91,24 +91,24 @@ fn parseInput(str: []u8) !void {
 			title = str[7..str.len];
 		}
 
-		const val = savedData.get(title) orelse {
+		const val = currentData.get(title) orelse {
 			std.debug.print("No todo with the name {s} exists", .{title});
 			return;
 		};
 		// already checked if exists before
 		// must remove BEFORE destryoing title
-		_ = savedData.remove(title);
+		_ = currentData.remove(title);
 		// title is val.title so it is destroyed when val.title is
-		savedData.allocator.free(val.title);
-		savedData.allocator.free(val.notes);
-		savedData.allocator.destroy(val);
+		currentData.allocator.free(val.title);
+		currentData.allocator.free(val.notes);
+		currentData.allocator.destroy(val);
 
 		std.debug.print("Removed {s} from the todo",.{title});
 	},
 
 
 	.list => {
-		var iter = savedData.valueIterator();
+		var iter = currentData.valueIterator();
 		var order = try std.ArrayList(*FileStructure).initCapacity(generalHeapAlloc, iter.len);
 		defer order.deinit(generalHeapAlloc);
 
@@ -183,7 +183,7 @@ fn parseInput(str: []u8) !void {
 
 	.search => {
 		if (!trieInitialised) {
-			var iter = savedData.valueIterator();
+			var iter = currentData.valueIterator();
 			while (iter.next()) |item| {
 				try searchTrie.add(item.*);
 			}

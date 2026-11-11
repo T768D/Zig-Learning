@@ -39,7 +39,7 @@ pub const Commands = enum {
 
 var arena: std.heap.ArenaAllocator = undefined;
 // hashmap because we need to access title when user enteres add/remove
-pub var savedData: std.StringHashMap(*FileStructure) = undefined;
+pub var currentData: std.StringHashMap(*FileStructure) = undefined;
 
 var ioType: std.Io.Threaded = undefined;
 pub var IO: std.Io = undefined;
@@ -52,7 +52,7 @@ pub fn init() void {
 	arena = .init(std.heap.page_allocator);
 	// defer arena.deinit();
 
-    savedData = .init(arena.allocator());
+    currentData = .init(arena.allocator());
     ioType = .init_single_threaded;
     IO = ioType.io();
 	// defer ioType.deinit();

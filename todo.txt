@@ -1,7 +1,4 @@
 make config generator title case
-
-
-rename saveData to smth else
 add load data from config command, option for different config
 add delete in trie
 convert trie to radix tree

@@ -5,7 +5,7 @@ const savedDataEnum = @import("config.zig").savedDataEnum;
 
 const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
-const savedData = &consts.savedData;
+const currentData = &consts.currentData;
 const consoleReader = &consts.reader.interface;
 
 const awaitInput = @import("utils.zig").awaitInput;
@@ -47,20 +47,20 @@ fn parseBinary(reader: *std.Io.Reader) !void {
 	}
 
 	while (reader.seek < reader.end) {
-		const block = try savedData.allocator.create(FileStructure);
+		const block = try currentData.allocator.create(FileStructure);
 
 		const priorityBytes = try reader.takeArray(2);
 		block.priority = (@as(u16, priorityBytes[0]) << 8) | priorityBytes[1];
 
 		const titleBytes = try reader.takeArray(2);
 		const titleOffset = (@as(u16, titleBytes[0]) << 8) | titleBytes[1];
-		block.title = try savedData.allocator.dupe(u8, try reader.take(titleOffset));
+		block.title = try currentData.allocator.dupe(u8, try reader.take(titleOffset));
 
 		const noteBytes = try reader.takeArray(2);
 		const noteOffset = (@as(u16, noteBytes[0]) << 8) | noteBytes[1];
-		block.notes = try savedData.allocator.dupe(u8, try reader.take(noteOffset));
+		block.notes = try currentData.allocator.dupe(u8, try reader.take(noteOffset));
 
-		try savedData.put(block.title, block);
+		try currentData.put(block.title, block);
 	}
 }
 
@@ -77,12 +77,12 @@ fn parseJSON(fileReader: *std.Io.Reader) !void {
 	// *block makes the capture block mutable
 	for (parsed.value) |block| {
 		// deep clone everything to be owned by savedData
-		const newBlock = try savedData.allocator.create(FileStructure);
-		newBlock.title = try savedData.allocator.dupe(u8, block.title);
-		newBlock.notes = try savedData.allocator.dupe(u8, block.notes);
+		const newBlock = try currentData.allocator.create(FileStructure);
+		newBlock.title = try currentData.allocator.dupe(u8, block.title);
+		newBlock.notes = try currentData.allocator.dupe(u8, block.notes);
 		newBlock.priority = block.priority;
 
-		try savedData.put(newBlock.title, newBlock);
+		try currentData.put(newBlock.title, newBlock);
 	}
 }
 
@@ -114,7 +114,7 @@ pub fn readSaved() !void {
 
 
 fn formatJSON(writer: *std.Io.Writer) void {
-	var iter = savedData.valueIterator();
+	var iter = currentData.valueIterator();
 	var isFirst = true;
 
 	writer.writeByte('[') catch |err| {
@@ -157,7 +157,7 @@ fn formatJSON(writer: *std.Io.Writer) void {
 /// [priority:u16, notesOffset: u16, notes: []const u8, titleOffset: u16, title: []const u8] repeated
 const storageVersion: u8 = 1;
 fn formatBinary(writer: *std.Io.Writer) void {
-	var iter = savedData.valueIterator();
+	var iter = currentData.valueIterator();
 	// this stores how many u8s are from the last offset
 	// u16 max is 65,535 so its plenty
 	// only title and notes have a offset, priority is always u16 in size
