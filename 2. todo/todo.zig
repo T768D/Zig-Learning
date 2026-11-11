@@ -28,7 +28,7 @@ pub fn main() !void {
 
 	// cant be moved up or else therell be a random segfault
 	clearConsole();
-	try readSaved();
+	try readSaved(null);
 
 	while (true) {
 		try parseInput(awaitInput());
@@ -240,14 +240,33 @@ fn parseInput(str: []u8) !void {
 			arg[x] = std.ascii.toLower(char);
 		}
 
-		std.debug.print("arg, '{s}'", .{arg});
-
 		// binary length is 6 lens
 		if (arg.len <= 6 and std.mem.startsWith(u8, arg, "bin")) {
 			writeSaved(.BINARY);
 		}
 		else if (std.mem.eql(u8, arg, "json")) {
 			writeSaved(.JSON);
+		}
+	},
+
+	.load => {
+		if (str.len <= 4) {
+			try readSaved(null);
+			return;
+		}
+
+		// 4 chars for load and 1 for space
+		var arg = str[5..];
+		for (arg, 0..) |char, x| {
+			arg[x] = std.ascii.toLower(char);
+		}
+
+		// binary length is 6 lens
+		if (arg.len <= 6 and std.mem.startsWith(u8, arg, "bin")) {
+			try readSaved(.BINARY);
+		}
+		else if (std.mem.eql(u8, arg, "json")) {
+			try readSaved(.JSON);
 		}
 	},
 

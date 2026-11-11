@@ -1,10 +1,13 @@
-make config generator title case
-add load data from config command, option for different config
+make load and save combined in switch?
+fix crash when loading json and it does not exist
+
 add delete in trie
 convert trie to radix tree
-make escape actually escape chars instead of replacing with space
-implement allocator that allows for individual, and freeing of all items
 
+make config generator title case
+make escape actually escape chars instead of replacing with space
+
+implement allocator that allows for individual, and freeing of all items
 generic build system for quick building
 
 https://knotsui.com/docs/tutorial

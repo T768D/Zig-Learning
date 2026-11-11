@@ -6,6 +6,7 @@ const savedDataEnum = @import("config.zig").savedDataEnum;
 const consts = @import("consts.zig");
 const FileStructure = consts.FileStructure;
 const currentData = &consts.currentData;
+const currentDataArena = &consts.currentDataArena;
 const consoleReader = &consts.reader.interface;
 
 const awaitInput = @import("utils.zig").awaitInput;
@@ -26,7 +27,7 @@ fn createStorageFile(cwd: std.Io.Dir) std.Io.File {
 fn parseBinary(reader: *std.Io.Reader) !void {
 	// instead of reading from buffer already in memory read streaming from file
 	const version = reader.takeByte() catch |err| {
-		std.debug.print("Unable to peek the first byte of the file, the version:\n{}",. {err});
+		std.debug.print("Unable to peek the first byte of the file. Is the file empty? Version:\n{}",. {err});
 		return;
 	};
 
@@ -86,11 +87,13 @@ fn parseJSON(fileReader: *std.Io.Reader) !void {
 	}
 }
 
-pub fn readSaved() !void {
+pub fn readSaved(override: ?savedDataEnum) !void {
+	const savedDataType = override orelse config.savedDataType;
+
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
 	// reading doesnt need locks
-	const file = cwd.openFile(consts.IO, if (config.savedDataType == .JSON) "storage.json" else "storage.bin", .{ .mode = .read_only })
+	const file = cwd.openFile(consts.IO, if (savedDataType == .JSON) "storage.json" else "storage.bin", .{ .mode = .read_only })
 		catch |err| switch (err) {
 			std.Io.File.OpenError.FileNotFound => createStorageFile(cwd),
 			else =>	return err
@@ -99,16 +102,16 @@ pub fn readSaved() !void {
 	var buffer: [4096]u8 = undefined;
 	var fileReader = file.reader(consts.IO, &buffer);
 
-	if (config.savedDataType == .JSON) {
-		parseJSON(&fileReader.interface) catch |err| {
-			std.debug.print("Unable to parse json file:\n{}", .{err});
-		};
+	currentData.deinit();
+	currentDataArena.deinit();
+	currentDataArena.* = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    currentData.* = .init(currentDataArena.allocator());
+
+	if (savedDataType == .JSON) {
+		try parseJSON(&fileReader.interface);
 	}
 	else {
-		parseBinary(&fileReader.interface) catch |err| {
-			// all uncaught errors are due from reader interface
-			std.debug.print("Unable to read from file:\n{}", .{err});
-		};
+		try parseBinary(&fileReader.interface);
 	}
 }
 

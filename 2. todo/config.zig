@@ -17,7 +17,7 @@ const backupBeforeSaveEnum = enum {
 pub const Config = struct {
     savedDataType: savedDataEnum,
 	backupBeforeSave: backupBeforeSaveEnum,
-	deleteBackupIfNoErr: bool,
+	deleteBackupIfNoErr: bool
 };
 
 pub var config: Config = .{

@@ -17,6 +17,7 @@ pub const Commands = enum {
 	search,
 	config,
 	save,
+	load,
 	cls, exit,
 	invalid,
 
@@ -29,6 +30,7 @@ pub const Commands = enum {
 			.search => "Searches the todo list based on user input",
 			.config => "Modifies the settings for this program",
 			.save => "Saves the todo list",
+			.load => "Reloads the todo list and discards current data",
 			.cls, .exit => "Exits the program",
 			// adding a return union was too verbose
 			.invalid => "A invalid command, here for technical reasons"
@@ -37,9 +39,10 @@ pub const Commands = enum {
 };
 
 
-var arena: std.heap.ArenaAllocator = undefined;
+
 // hashmap because we need to access title when user enteres add/remove
 pub var currentData: std.StringHashMap(*FileStructure) = undefined;
+pub var currentDataArena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
 
 var ioType: std.Io.Threaded = undefined;
 pub var IO: std.Io = undefined;
@@ -49,10 +52,8 @@ var inputBuffer: [2048]u8 = undefined;
 
 
 pub fn init() void {
-	arena = .init(std.heap.page_allocator);
-	// defer arena.deinit();
+    currentData = .init(currentDataArena.allocator());
 
-    currentData = .init(arena.allocator());
     ioType = .init_single_threaded;
     IO = ioType.io();
 	// defer ioType.deinit();
