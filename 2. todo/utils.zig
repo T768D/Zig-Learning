@@ -4,6 +4,8 @@ const Commands = @import("consts.zig").Commands;
 const IO = &@import("consts.zig").IO;
 const reader = &@import("consts.zig").reader.interface;
 
+const saveDataEnum = @import("config.zig").savedDataEnum; 
+
 
 pub fn clearConsole() void {
 	// \x1b[2J clears visible screen 
@@ -71,4 +73,20 @@ pub fn awaitInput() []u8 {
 	} orelse return "";
 
 	return trimEnd(input);
+}
+
+pub fn parseFormat(arg: []u8) ?saveDataEnum {
+    for (arg) |*char| {
+        char.* = std.ascii.toLower(char.*);
+    }
+
+    if (arg.len <= 6 and std.mem.startsWith(u8, arg, "bin")) {
+        return .BINARY;
+    }
+
+    if (std.mem.eql(u8, arg, "json")) {
+        return .JSON;
+    }
+
+    return null;
 }

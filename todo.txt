@@ -1,4 +1,3 @@
-make load and save combined in switch?
 fix crash when loading json and it does not exist
 
 add delete in trie
@@ -8,6 +7,7 @@ make config generator title case
 make escape actually escape chars instead of replacing with space
 
 implement allocator that allows for individual, and freeing of all items
+then add deinit for trie
 generic build system for quick building
 
 https://knotsui.com/docs/tutorial

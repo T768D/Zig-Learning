@@ -20,7 +20,7 @@ pub const TrieClass = struct {
 		self.allocator.free(fileStructure.notes);
 		self.allocator.free(fileStructure);
 	}
-	
+
 	pub fn add(self: *@This(), item: *FileStructure) !void {
 		// dont want to make entire class mutable
 		var lastNode = &self.rootNode;

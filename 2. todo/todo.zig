@@ -4,9 +4,9 @@ const generalHeapAlloc = @import("alloc.zig").generalHeapAlloc;
 const utils = @import("utils.zig");
 const parseCommand = utils.parseCommand;
 const clearConsole = utils.clearConsole;
-const trimEnd = utils.trimEnd;
 const escapeStr = utils.escapeStr;
 const awaitInput = utils.awaitInput;
+const parseFormat = utils.parseFormat;
 
 // keep IO under consts because would need to convert out of pointer anyways, not much typing saved
 const consts = @import("consts.zig");
@@ -229,45 +229,15 @@ fn parseInput(str: []u8) !void {
 	},
 
 	.save => {
-		if (str.len <= 4) {
-			writeSaved(null);
-			return;
-		}
-
-		// 4 chars for save and 1 for space
-		var arg = str[5..];
-		for (arg, 0..) |char, x| {
-			arg[x] = std.ascii.toLower(char);
-		}
-
-		// binary length is 6 lens
-		if (arg.len <= 6 and std.mem.startsWith(u8, arg, "bin")) {
-			writeSaved(.BINARY);
-		}
-		else if (std.mem.eql(u8, arg, "json")) {
-			writeSaved(.JSON);
-		}
+		writeSaved(
+			if (str.len <= 4) null else parseFormat(str[5..]) orelse return
+		);
 	},
 
 	.load => {
-		if (str.len <= 4) {
-			try readSaved(null);
-			return;
-		}
-
-		// 4 chars for load and 1 for space
-		var arg = str[5..];
-		for (arg, 0..) |char, x| {
-			arg[x] = std.ascii.toLower(char);
-		}
-
-		// binary length is 6 lens
-		if (arg.len <= 6 and std.mem.startsWith(u8, arg, "bin")) {
-			try readSaved(.BINARY);
-		}
-		else if (std.mem.eql(u8, arg, "json")) {
-			try readSaved(.JSON);
-		}
+		try readSaved(
+			if (str.len <= 4) null else	parseFormat(str[5..]) orelse return
+		);
 	},
 
 	// switch will return Commands.invalid for a invalid command, so i dont have to make a union so its less verbose
