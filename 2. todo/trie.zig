@@ -117,21 +117,20 @@ pub const TrieClass = struct {
 		return lastNode;
 	}
 
-	/// resultAlloc should be a arena allocator to deinit the slices in the array easily
-	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
-		const lastNode = self.iterateTo(str) orelse return null;
+	/// Iterates over all subnodes of the given node and returns a arraylist with pointers to the values of each node
+	fn iterate(self: *@This(), startNode: *const Node, resultAlloc: std.mem.Allocator) !std.ArrayList(*FileStructure) {
+		_ = self;
+		
+		var output = try std.ArrayList(*FileStructure).initCapacity(resultAlloc, 15);
 
 		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 15);
 		defer stack.deinit(generalHeapAlloc);
-		stack.appendAssumeCapacity(lastNode);
-
-		// initialised with resultAlloc beacuse lives after func ends
-		var results = try std.ArrayList(*FileStructure).initCapacity(resultAlloc, 5);
+		stack.appendAssumeCapacity(startNode);
 
 		// do depth first because shifting arr by 1 is o(n) each time
 		while (stack.pop()) |last| {
 			if (last.val) |val| {
-				try results.append(resultAlloc, val);
+				try output.append(resultAlloc, val);
 			}
 
 			var iter = last.next.?.valueIterator();
@@ -141,34 +140,22 @@ pub const TrieClass = struct {
 			}
 		}
 		
-		return results;
+		return output;
 	}
 
+
+	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
+		const endOfExactMatch = self.iterateTo(str) orelse return null;
+
+		// initialised with resultAlloc beacuse lives after func ends
+		return try self.iterate(endOfExactMatch, resultAlloc);
+	}
 
 	/// Returns pointers to all the items in the trie
 	/// Do not assume that all pointers to the items will be valid forever
 	/// Allocator param is only used for the returned arraylist
-	pub fn getAllItems(self: *@This(), alloc: std.mem.Allocator) !std.ArrayList(*const FileStructure) {
-		var output = try std.ArrayList(*const FileStructure).initCapacity(alloc, 100);
-
-		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 15);
-		defer stack.deinit(generalHeapAlloc);
-		stack.appendAssumeCapacity(&self.rootNode);
-
-		// do depth first because shifting arr by 1 is o(n) each time
-		while (stack.pop()) |last| {
-			if (last.val) |val| {
-				try output.append(alloc, val);
-			}
-
-			var iter = last.next.?.valueIterator();
-			while (iter.next()) |block| {
-				// block might be stack memory, need to copy to resultAlloc?
-				try stack.append(generalHeapAlloc, block.*);
-			}
-		}
-
-		return output;
+	pub fn getAllItems(self: *@This(), resultAlloc: std.mem.Allocator) !std.ArrayList(*FileStructure) {
+		return try self.iterate(&self.rootNode, resultAlloc);
 	}
 
 	// pub fn deinit() void {

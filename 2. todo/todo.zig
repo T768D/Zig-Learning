@@ -133,9 +133,9 @@ fn parseInput(str: []u8) !void {
 			break :sw;
 		}
 
-		std.debug.print("Items:\n", .{});
+		std.debug.print("Items:", .{});
 		for (items.items) |item| {
-			std.debug.print("{s}, ", .{item.title});
+			std.debug.print("\n{s}", .{item.title});
 		}
 	},
 
