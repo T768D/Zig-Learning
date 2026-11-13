@@ -14,7 +14,8 @@ const FileStructure = consts.FileStructure;
 const currentData = &consts.currentData;
 const Config = @import("config.zig");
 
-var searchTrie = @import("trie.zig").TrieClass;
+const TrieClass = @import("trie.zig").TrieClass;
+var searchTrie: TrieClass = undefined;
 var trieInitialised = false;
 
 const readSaved = @import("storage.zig").readSaved;
@@ -23,7 +24,7 @@ const writeSaved = @import("storage.zig").writeSaved;
 
 pub fn main() !void {
 	consts.init();
-	searchTrie = searchTrie.init(generalHeapAlloc);
+	searchTrie = TrieClass.init(generalHeapAlloc);
 
 	// cant be moved up or else therell be a random segfault
 	clearConsole();

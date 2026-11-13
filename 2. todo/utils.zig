@@ -30,7 +30,7 @@ pub fn trimEnd(str: []u8) []u8 {
 pub fn parseCommand(str: []const u8) Commands {
 	const info = @typeInfo(Commands).@"enum";
 	inline for (info.field_names, info.field_values) |name, value| {
-        if (std.mem.startsWith(u8, str, name)) {
+        if (std.mem.eql(u8, str, name)) {
             return @fromBackingInt(value);
         }
 	}

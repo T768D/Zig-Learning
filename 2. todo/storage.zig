@@ -107,7 +107,7 @@ pub fn readSaved(override: ?savedDataEnum) !void {
 			std.Io.File.OpenError.FileNotFound => createStorageFile(cwd),
 			else =>	return err
 		};
-	defer file.unlock(consts.IO);
+	// close unlocks file too
 	defer file.close(consts.IO);
 
 	var buffer: [4096]u8 = undefined;
@@ -239,8 +239,7 @@ pub fn writeSaved(override: ?savedDataEnum) void {
 				return;
 			}
 		};
-	// already locked when using openFile
-	defer file.unlock(consts.IO);
+	// close unlocks file too
 	defer file.close(consts.IO);
 
 	// file already created if not exists
