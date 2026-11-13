@@ -144,8 +144,31 @@ pub const TrieClass = struct {
 		return results;
 	}
 
-	fn initHashmap(self: *@This()) std.AutoHashMap(u8, *Node) {
-		return std.AutoHashMap(u8, *Node).init(self.allocator);
+
+	/// Returns pointers to all the items in the trie
+	/// Do not assume that all pointers to the items will be valid forever
+	/// Allocator param is only used for the returned arraylist
+	pub fn getAllItems(self: *@This(), alloc: std.mem.Allocator) !std.ArrayList(*const FileStructure) {
+		var output = try std.ArrayList(*const FileStructure).initCapacity(alloc, 100);
+
+		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 15);
+		defer stack.deinit(generalHeapAlloc);
+		stack.appendAssumeCapacity(&self.rootNode);
+
+		// do depth first because shifting arr by 1 is o(n) each time
+		while (stack.pop()) |last| {
+			if (last.val) |val| {
+				try output.append(alloc, val);
+			}
+
+			var iter = last.next.?.valueIterator();
+			while (iter.next()) |block| {
+				// block might be stack memory, need to copy to resultAlloc?
+				try stack.append(generalHeapAlloc, block.*);
+			}
+		}
+
+		return output;
 	}
 
 	// pub fn deinit() void {

@@ -124,6 +124,22 @@ fn parseInput(str: []u8) !void {
 	},
 
 
+	.listSearchIndexed => {
+		var items = try searchTrie.getAllItems(generalHeapAlloc);
+		defer items.deinit(generalHeapAlloc);
+
+		if (items.items.len == 0) {
+			std.debug.print("No items are indexed in the search trie", .{});
+			break :sw;
+		}
+
+		std.debug.print("Items:\n", .{});
+		for (items.items) |item| {
+			std.debug.print("{s}, ", .{item.title});
+		}
+	},
+
+
 	// simplify and clean up later
 	.config => {
 		std.debug.print("Choose a config to change:", .{});
