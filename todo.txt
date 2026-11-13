@@ -1,6 +1,6 @@
-use param to delete or search
+fix delete in trie
+when listing trie after deletion the pointer becomes invalid data
 
-add delete in trie
 convert trie to radix tree
 
 make config generator title case

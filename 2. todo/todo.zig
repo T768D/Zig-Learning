@@ -40,6 +40,8 @@ fn sortAssitPointer(_: void, A: *FileStructure, B: *FileStructure) bool {
 	return A.priority > B.priority;
 }
 
+
+/// str is trimmed, so no trailing whitespace
 fn parseInput(str: []u8) !void {
 	clearConsole();
 
@@ -206,8 +208,14 @@ fn parseInput(str: []u8) !void {
 			trieInitialised = true;
 		}
 
-		std.debug.print("Enter title to search for", .{});
-		const searchItem = awaitInput();
+		var searchItem: []const u8 = undefined;
+		if (str.len <= 6) {
+			std.debug.print("Enter title to search for", .{});
+			searchItem = awaitInput();
+		} 
+		else {
+			searchItem = str[7..];
+		}
 
 		var tempAlloc = std.heap.ArenaAllocator.init(generalHeapAlloc);
 		defer tempAlloc.deinit();

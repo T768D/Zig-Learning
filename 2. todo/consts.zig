@@ -13,6 +13,7 @@ pub const Commands = enum {
 	help,
 	add,
 	delete, remove,
+	// this must come before list as parseCommand checks for startsWith not eql to allow for args
 	listSearchIndexed,
 	list,
 	search,
