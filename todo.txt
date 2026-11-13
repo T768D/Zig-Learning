@@ -1,5 +1,3 @@
-fix crash when loading json and it does not exist
-
 add delete in trie
 convert trie to radix tree
 
@@ -11,3 +9,5 @@ then add deinit for trie
 generic build system for quick building
 
 https://knotsui.com/docs/tutorial
+
+implement encryption and memory encryption

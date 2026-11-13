@@ -27,7 +27,7 @@ fn createStorageFile(cwd: std.Io.Dir) std.Io.File {
 fn parseBinary(reader: *std.Io.Reader) !void {
 	// instead of reading from buffer already in memory read streaming from file
 	const version = reader.takeByte() catch |err| {
-		std.debug.print("Unable to peek the first byte of the file. Is the file empty? Version:\n{}",. {err});
+		std.debug.print("Unable to peek the first byte of the binary storage file. Is the file empty? Version:\n{}",. {err});
 		return;
 	};
 
@@ -67,10 +67,15 @@ fn parseBinary(reader: *std.Io.Reader) !void {
 
 fn parseJSON(fileReader: *std.Io.Reader) !void {
 	const fileContents = fileReader.allocRemaining(generalHeapAlloc,.unlimited) catch |err| {
-		std.debug.print("Failed to read storage file: {}", .{err});
+		std.debug.print("Failed to read from json storage file: {}", .{err});
 		return;
 	};
 	defer generalHeapAlloc.free(fileContents);
+
+	if (fileContents.len == 0) {
+		std.debug.print("JSON storage file is empty!", .{});
+		return;
+	}
 
 	const parsed = try std.json.parseFromSlice([]FileStructure, generalHeapAlloc, fileContents, .{});
 	defer parsed.deinit();
@@ -93,11 +98,17 @@ pub fn readSaved(override: ?savedDataEnum) !void {
 	const cwd = std.Io.Dir.cwd();
 	// need the try to catch the error propogated from cwd.createFile in this catch block
 	// reading doesnt need locks
-	const file = cwd.openFile(consts.IO, if (savedDataType == .JSON) "storage.json" else "storage.bin", .{ .mode = .read_only })
+	const file = cwd.openFile(
+		consts.IO, 
+		if (savedDataType == .JSON) "storage.json" else "storage.bin", 
+		.{ .mode = .read_only, .lock = .exclusive }
+	)
 		catch |err| switch (err) {
 			std.Io.File.OpenError.FileNotFound => createStorageFile(cwd),
 			else =>	return err
 		};
+	defer file.unlock(consts.IO);
+	defer file.close(consts.IO);
 
 	var buffer: [4096]u8 = undefined;
 	var fileReader = file.reader(consts.IO, &buffer);
@@ -230,6 +241,7 @@ pub fn writeSaved(override: ?savedDataEnum) void {
 		};
 	// already locked when using openFile
 	defer file.unlock(consts.IO);
+	defer file.close(consts.IO);
 
 	// file already created if not exists
 	if (
