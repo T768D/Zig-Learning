@@ -11,6 +11,17 @@ pub const TrieClass = struct {
 	rootNode: Node,
 	allocator: std.mem.Allocator,
 
+	// alloc cant be arena, individual nodes may need to be cleared, but also needs to be able to clear all at once
+	pub inline fn init(alloc: std.mem.Allocator) TrieClass {
+		return .{
+			.allocator = alloc,
+			.rootNode = .{
+				.next = std.AutoHashMap(u8, *Node).init(alloc),
+				.val = null
+			},
+		};
+	}
+
 	// does not remove pointer from Node.next, you need to do it before this
 	fn freeNodeIfExist(self: *@This(), fileStructure: ?*FileStructure) !void {
 		if (fileStructure == null) {
@@ -20,6 +31,11 @@ pub const TrieClass = struct {
 		self.allocator.free(fileStructure.notes);
 		self.allocator.free(fileStructure);
 	}
+
+	fn initHashmap(self: *@This()) std.AutoHashMap(u8, *Node) {
+		return std.AutoHashMap(u8, *Node).init(self.allocator);
+	}
+
 
 	pub fn add(self: *@This(), item: *FileStructure) !void {
 		// dont want to make entire class mutable
@@ -89,7 +105,9 @@ pub const TrieClass = struct {
 		return true;
 	}
 
-	fn iterate(self: *@This(), str: []const u8) ?*const Node {
+
+	/// Iterates to the end of the string provided and returns the node
+	fn iterateTo(self: *@This(), str: []const u8) ?*const Node {
 		var lastNode = &self.rootNode;
 
 		for (str) |char| {
@@ -99,11 +117,11 @@ pub const TrieClass = struct {
 		return lastNode;
 	}
 
-	// resultAlloc should be a arena allocator to deinit the slices in the array easily
+	/// resultAlloc should be a arena allocator to deinit the slices in the array easily
 	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
-		const lastNode = self.iterate(str) orelse return null;
+		const lastNode = self.iterateTo(str) orelse return null;
 
-		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 10);
+		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 15);
 		defer stack.deinit(generalHeapAlloc);
 		stack.appendAssumeCapacity(lastNode);
 
@@ -134,15 +152,3 @@ pub const TrieClass = struct {
 		// self.allocTemp.deinit();
 	// }
 };
-
-
-// alloc cant be arena, individual nodes may need to be cleared, but also needs to be able to clear all at once
-pub fn init(alloc: std.mem.Allocator) TrieClass {
-    return .{
-        .allocator = alloc,
-        .rootNode = .{
-			.next = std.AutoHashMap(u8, *Node).init(alloc),
-			.val = null
-		},
-    };
-}
