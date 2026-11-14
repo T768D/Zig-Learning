@@ -36,7 +36,7 @@ pub fn main() !void {
 }
 
 
-fn sortAssitPointer(_: void, A: *FileStructure, B: *FileStructure) bool {
+fn sortAssistPointer(_: void, A: *const FileStructure, B: *const FileStructure) bool {
 	return A.priority > B.priority;
 }
 
@@ -111,14 +111,14 @@ fn parseInput(str: []u8) !void {
 
 	.list => {
 		var iter = currentData.valueIterator();
-		var order = try std.ArrayList(*FileStructure).initCapacity(generalHeapAlloc, iter.len);
+		var order = try std.ArrayList(*const FileStructure).initCapacity(generalHeapAlloc, iter.len);
 		defer order.deinit(generalHeapAlloc);
 
 		while (iter.next()) |item| {
 			try order.append(generalHeapAlloc, item.*);
 		}
 
-		std.mem.sort(*FileStructure,order.items,{}, sortAssitPointer);
+		std.mem.sort(*const FileStructure,order.items,{}, sortAssistPointer);
 
 		for (order.items) |item| {
 			std.debug.print("{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});
@@ -231,7 +231,7 @@ fn parseInput(str: []u8) !void {
 			break :sw;
 		}
 
-		std.mem.sort(*FileStructure,searchResult.?.items,{}, sortAssitPointer);
+		std.mem.sort(*const FileStructure,searchResult.?.items,{}, sortAssistPointer);
 
 		for (searchResult.?.items) |item| {
 			std.debug.print("\n{d}  {s}\n{s}\n\n", .{item.priority, item.title, item.notes});

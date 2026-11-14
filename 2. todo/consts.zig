@@ -44,7 +44,7 @@ pub const Commands = enum {
 
 
 // hashmap because we need to access title when user enteres add/remove
-pub var currentData: std.StringHashMap(*FileStructure) = undefined;
+pub var currentData: std.StringHashMap(*const FileStructure) = undefined;
 pub var currentDataArena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
 
 var ioType: std.Io.Threaded = undefined;

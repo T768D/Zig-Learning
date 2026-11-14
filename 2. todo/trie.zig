@@ -3,7 +3,7 @@ const FileStructure = @import("consts.zig").FileStructure;
 const generalHeapAlloc = @import("alloc.zig").generalHeapAlloc;
 
 const Node = struct {
-	val: ?*FileStructure,
+	val: ?*const FileStructure,
 	next: ?std.AutoHashMap(u8, *Node),
 };
 
@@ -23,7 +23,7 @@ pub const TrieClass = struct {
 	}
 
 	// does not remove pointer from Node.next, you need to do it before this
-	fn freeNodeIfExist(self: *@This(), fileStructure: ?*FileStructure) !void {
+	fn freeNodeIfExist(self: *@This(), fileStructure: ?*const FileStructure) !void {
 		if (fileStructure == null) {
 			return;
 		}
@@ -37,7 +37,7 @@ pub const TrieClass = struct {
 	}
 
 
-	pub fn add(self: *@This(), item: *FileStructure) !void {
+	pub fn add(self: *@This(), item: *const FileStructure) !void {
 		// dont want to make entire class mutable
 		var lastNode = &self.rootNode;
 
@@ -118,10 +118,11 @@ pub const TrieClass = struct {
 	}
 
 	/// Iterates over all subnodes of the given node and returns a arraylist with pointers to the values of each node
-	fn iterate(self: *@This(), startNode: *const Node, resultAlloc: std.mem.Allocator) !std.ArrayList(*FileStructure) {
+	fn iterate(self: *@This(), startNode: *const Node, resultAlloc: std.mem.Allocator) !std.ArrayList(*const FileStructure) {
+		// self isint used but i still want this to be a class method
 		_ = self;
-		
-		var output = try std.ArrayList(*FileStructure).initCapacity(resultAlloc, 15);
+
+		var output = try std.ArrayList(*const FileStructure).initCapacity(resultAlloc, 15);
 
 		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 15);
 		defer stack.deinit(generalHeapAlloc);
@@ -139,12 +140,12 @@ pub const TrieClass = struct {
 				try stack.append(generalHeapAlloc, block.*);
 			}
 		}
-		
+
 		return output;
 	}
 
 
-	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*FileStructure) {
+	pub fn search(self: *@This(), str: []const u8, resultAlloc: std.mem.Allocator) !?std.ArrayList(*const FileStructure) {
 		const endOfExactMatch = self.iterateTo(str) orelse return null;
 
 		// initialised with resultAlloc beacuse lives after func ends
@@ -154,7 +155,7 @@ pub const TrieClass = struct {
 	/// Returns pointers to all the items in the trie
 	/// Do not assume that all pointers to the items will be valid forever
 	/// Allocator param is only used for the returned arraylist
-	pub fn getAllItems(self: *@This(), resultAlloc: std.mem.Allocator) !std.ArrayList(*FileStructure) {
+	pub fn getAllItems(self: *@This(), resultAlloc: std.mem.Allocator) !std.ArrayList(*const FileStructure) {
 		return try self.iterate(&self.rootNode, resultAlloc);
 	}
 
