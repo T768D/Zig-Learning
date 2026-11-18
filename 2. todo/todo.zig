@@ -53,7 +53,7 @@ fn parseInput(str: []u8) !void {
 		std.debug.print("Input the title", .{});
 		// needs escaping because of json format saving
 		// if implemented non json format then no need to escape
-		const title = escapeStr(awaitInput());
+		const title = awaitInput();
 		appendingData.title = try currentData.allocator.dupe(u8, title);
 
 		while (true) {
@@ -101,6 +101,9 @@ fn parseInput(str: []u8) !void {
 		const deleted = try searchTrie.delete(val);
 		if (deleted) {
 			std.debug.print("Removed {s} from searchTrie\n", .{title});
+		}
+		else {
+			std.debug.print("Unable to find {s} in the searchTrie, either trie not initialised or something went wrong", .{title});
 		}
 
 		// already checked if exists before
@@ -255,6 +258,7 @@ fn parseInput(str: []u8) !void {
 
 	.exit, .cls => {
 		clearConsole();
+		std.debug.print("Program exited", .{});
 		std.process.exit(0);
 	},
 

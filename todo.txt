@@ -1,7 +1,9 @@
+config for printing message when exiting
+config for title message
+
 convert trie to radix tree
 
 make config generator title case
-make escape actually escape chars instead of replacing with space
 
 implement allocator that allows for individual, and freeing of all items
 then add deinit for trie
