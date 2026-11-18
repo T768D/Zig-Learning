@@ -257,8 +257,15 @@ fn parseInput(str: []u8) !void {
 	},
 
 	.exit, .cls => {
-		clearConsole();
-		std.debug.print("Program exited", .{});
+		// temporarily to remove the title when exiting
+		if (Config.config.printExitMsg) {
+			clearConsole();
+			std.debug.print("Program exited", .{});
+		}
+		else {
+			Config.config.printTitleMsg = false;
+			clearConsole();
+		}
 		std.process.exit(0);
 	},
 

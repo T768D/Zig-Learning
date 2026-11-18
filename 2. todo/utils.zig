@@ -4,7 +4,7 @@ const Commands = @import("consts.zig").Commands;
 const IO = &@import("consts.zig").IO;
 const reader = &@import("consts.zig").reader.interface;
 
-const saveDataEnum = @import("config.zig").savedDataEnum; 
+const Config = @import("config.zig"); 
 
 
 pub fn clearConsole() void {
@@ -12,7 +12,9 @@ pub fn clearConsole() void {
 	// \x1b[3J clears scrollback history
 	// \x1b[H moves cursor to top left
 	std.Io.File.stdout().writeStreamingAll(IO.*, "\x1b[3J\x1b[2J\x1b[H") catch {};
-	std.debug.print("Zigdo CLI\n\n", .{});
+	if (Config.config.printTitleMsg) {
+		std.debug.print("Zigdo CLI\n\n", .{});
+	}
 }
 
 pub fn trimEnd(str: []u8) []u8 {
@@ -92,7 +94,7 @@ pub fn awaitInput() []u8 {
 	return trimEnd(input);
 }
 
-pub fn parseFormat(arg: []u8) ?saveDataEnum {
+pub fn parseFormat(arg: []u8) ?Config.savedDataEnum {
     for (arg) |*char| {
         char.* = std.ascii.toLower(char.*);
     }

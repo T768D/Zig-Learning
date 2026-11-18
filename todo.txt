@@ -1,6 +1,3 @@
-config for printing message when exiting
-config for title message
-
 convert trie to radix tree
 
 make config generator title case

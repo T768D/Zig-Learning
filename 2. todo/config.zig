@@ -17,20 +17,26 @@ const backupBeforeSaveEnum = enum {
 pub const Config = struct {
     savedDataType: savedDataEnum,
 	backupBeforeSave: backupBeforeSaveEnum,
-	deleteBackupIfNoErr: bool
+	deleteBackupIfNoErr: bool,
+	printExitMsg: bool,
+	printTitleMsg: bool
 };
 
 pub var config: Config = .{
     .savedDataType = .BINARY,
 	.backupBeforeSave = .OFF,
-	.deleteBackupIfNoErr = true
+	.deleteBackupIfNoErr = true,
+	.printExitMsg = true,
+	.printTitleMsg = true,
 };
 
 pub fn mutateFieldFromIndex(index: usize, value: usize) void {
     switch (index) {
         0 => config.savedDataType = @fromBackingInt(@intCast(value)),
         1 => config.backupBeforeSave = @fromBackingInt(@intCast(value)),
-        2 => config.deleteBackupIfNoErr = value == 0, // true comes first
+        2 => config.deleteBackupIfNoErr = (value == 0), // true comes first
+		3 => config.printExitMsg = (value == 0),
+		4 => config.printTitleMsg = (value == 0),
         else => @panic("Invalid struct index"),
     }
 }
