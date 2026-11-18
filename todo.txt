@@ -1,7 +1,5 @@
 convert trie to radix tree
 
-make config generator title case
-
 implement allocator that allows for individual, and freeing of all items
 then add deinit for trie
 generic build system for quick building

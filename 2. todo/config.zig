@@ -58,7 +58,7 @@ inline fn getReadable() struct {
 	comptime var valueArr: [arrayLen][]const []const u8 = undefined;
 
 	inline for (info.field_names, info.field_types, 0..) |nameName, nameType, nameIndex| {
-		nameArr[nameIndex] = nameName;
+		nameArr[nameIndex] = comptime makeTitleCase(nameName);
 
 		switch (@typeInfo(nameType)) {
 			
@@ -95,3 +95,33 @@ inline fn getReadable() struct {
 }
 
 pub const configHumanReadable = getReadable();
+
+
+pub inline fn makeTitleCase(comptime str: []const u8) []const u8 {
+	comptime var count = str.len;
+
+	for (str) |char| {
+		if (char > 'A' and char < 'Z') {
+			count += 1;
+		}
+	}
+
+	if (count == 0) {
+		return str;
+	}
+
+	comptime var buf: [count]u8 = undefined;
+	comptime var x = 0;
+	for (str) |char| {
+		if (char > 'A' and char < 'Z') {
+			buf[x] = ' ';
+			x += 1;
+		}
+		buf[x] = char;
+		x += 1;
+	}
+
+	buf[0] = comptime std.ascii.toUpper(buf[0]);
+	const nonComptimeStr = buf;
+	return nonComptimeStr[0..];
+}
