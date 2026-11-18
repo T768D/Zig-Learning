@@ -49,16 +49,33 @@ pub fn removeNewLines(str: []u8) []const u8 {
 	return str;
 }
 
-// returns consst so any mutation must be explicitly const casted
-// should i make it just escape it instead of just replacing it with a space
-pub fn escapeStr(str: []u8) []u8 {
-	for (str, 0..) |char, index| {
+/// Returning null means no changes were made
+/// Escapes things that may cause issues in json storage format
+pub fn escapeStr(str: []const u8, alloc: std.mem.Allocator) !?std.ArrayList(u8) {
+	var increaseCount: usize = 0;
+
+	for (str) |char| {
 		if (char == '"' or char == '\'' or char == '\\' or char == '\n') {
-			str[index] = ' ';
+			increaseCount += 1;
 		}
 	}
 
-	return str;
+	if (increaseCount == 0) {
+		return null;
+	}
+
+	var arr = try std.ArrayList(u8).initCapacity(alloc, str.len + increaseCount);
+	errdefer arr.deinit();
+
+	for (str) |char| {
+		// no escaping ' as json saves using "
+		if (char == '"' or char == '\\' or char == '\n') {
+			arr.appendAssumeCapacity('\\');
+		}
+		arr.appendAssumeCapacity(char);
+	}
+
+	return arr;
 }
 
 // slice returned is one directly to reader buffer, clone if it needs long life

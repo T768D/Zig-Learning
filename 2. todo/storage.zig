@@ -11,6 +11,7 @@ const consoleReader = &consts.reader.interface;
 
 const awaitInput = @import("utils.zig").awaitInput;
 const clearConsole = @import("utils.zig").clearConsole;
+const escapeStr = @import("utils.zig").escapeStr;
 
 
 fn createStorageFile(cwd: std.Io.Dir) std.Io.File {
@@ -137,11 +138,22 @@ fn formatJSON(writer: *std.Io.Writer) void {
 	};
 
 	while (iter.next()) |block| {
+		var titleCleanup = escapeStr(block.*.title, generalHeapAlloc) catch |err| {
+			std.debug.print("Unable to format json title\n{}", .{err});
+			return;
+		};
+		var notesCleanup = escapeStr(block.*.notes, generalHeapAlloc) catch |err| {
+			std.debug.print("Unable to format json title\n{}", .{err});
+			return;
+		};
+		const fmtTitle = if (titleCleanup != null) titleCleanup.?.items else block.*.title;
+		const fmtNotes = if (notesCleanup != null) notesCleanup.?.items else block.*.notes;
+
 		const formatted = std.fmt.allocPrint(
 			generalHeapAlloc,
 			// needs {{ otherwise zig will think its format string
 			"{s}{{\n    \"title\": \"{s}\",\n    \"priority\": {d},\n    \"notes\": \"{s}\"\n}}",
-			.{ if (isFirst) "" else ",\n", block.*.title, block.*.priority, block.*.notes },
+			.{ if (isFirst) "" else ",\n", fmtTitle, block.*.priority, fmtNotes },
 		) catch |err| {
 			std.debug.print("Failed to format block\n {}\n", .{err});
 			return;
@@ -153,6 +165,13 @@ fn formatJSON(writer: *std.Io.Writer) void {
 			std.debug.print("Failed to write block to storage file: {}\n", .{err});
 			return;
 		};
+
+		if (titleCleanup) |*cleanup| {
+			cleanup.deinit(generalHeapAlloc);
+		}
+		if (notesCleanup) |*cleanup| {
+			cleanup.deinit(generalHeapAlloc);
+		}
 
 		isFirst = false;
 	}
