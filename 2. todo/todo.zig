@@ -97,6 +97,12 @@ fn parseInput(str: []u8) !void {
 			std.debug.print("No todo with the name {s} exists", .{title});
 			return;
 		};
+		
+		const deleted = try searchTrie.delete(val);
+		if (deleted) {
+			std.debug.print("Removed {s} from searchTrie\n", .{title});
+		}
+
 		// already checked if exists before
 		// must remove BEFORE destryoing title
 		_ = currentData.remove(title);

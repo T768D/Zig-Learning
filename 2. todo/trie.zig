@@ -22,16 +22,6 @@ pub const TrieClass = struct {
 		};
 	}
 
-	// does not remove pointer from Node.next, you need to do it before this
-	fn freeNodeIfExist(self: *@This(), fileStructure: ?*const FileStructure) !void {
-		if (fileStructure == null) {
-			return;
-		}
-		self.allocator.free(fileStructure.title);
-		self.allocator.free(fileStructure.notes);
-		self.allocator.free(fileStructure);
-	}
-
 	fn initHashmap(self: *@This()) std.AutoHashMap(u8, *Node) {
 		return std.AutoHashMap(u8, *Node).init(self.allocator);
 	}
@@ -65,44 +55,53 @@ pub const TrieClass = struct {
 		lastNode.val = item;
 	}
 
-	pub fn delete(self: *@This(), item: *FileStructure) !bool {
-		var stack = try std.ArrayList(*const Node).initCapacity(generalHeapAlloc, 10);
-		defer stack.deinit(generalHeapAlloc);
+	/// Returns true if item was deleted, false if item did not exist
+	/// currentData's allocator owns the structs, the only thing we own here is the hashmap and node
+	pub fn delete(self: *@This(), item: *const FileStructure) !bool {
 
-		var lastNode = &self.rootNode;
+		var path = (try self.iterateToRetainStack(item.title, generalHeapAlloc)) orelse return false;
+		defer path.deinit(generalHeapAlloc);
 
-		for (item.title) |char| {
-			lastNode = lastNode.next.?.get(char) orelse return false;
-			try stack.append(generalHeapAlloc, lastNode);
-		}
-
-		// if search str is 0 or tree depth is 0, then stack will have len 0, and cause panic when popping stack (i think)
-		if (lastNode.val == null or stack.items.len == 0)  {
-			return false;
-		}
-
-		self.freeNodeIfExist(lastNode.val);
-		lastNode.val = null;
-
-		if (lastNode.next == null) {
-			return true;
-		}
-
-		var depth = stack.items.len - 1;
-		while (stack.pop()) |stackItem| {
-			// stops removing the leafs if it contains another child node, or it is a ending node
-			if (stackItem.val != null or stackItem.next.?.count() >= 2) {
-				return true;
+		// index 0 is root node, do not iterate over it
+		var index = path.items.len - 1;
+		while (index >= 1) {
+			const node = path.items[index];
+			// iterates upwards so if parentNodeNext is removed, itll be covered next iter
+			if (node.next == null and node.val == null) {
+				self.allocator.destroy(node);
 			}
 
-			const existed = stackItem.next.?.remove(item.title[depth]);
-			if (!existed) {
-				std.debug.print("Trie hashmap does not have char {c} for some reason", .{item.title[depth]});
+			const parentNode = path.items[index - 1];
+			// this has to have existed otherwise self.iterateToRetainStack cant reach this
+			var parentNodeNext = parentNode.next orelse unreachable;
+			// assumes that the title and stack have the same char at same index
+			std.debug.assert(parentNodeNext.remove(item.title[index - 1]));
+			
+			if (parentNodeNext.count() == 0) {
+				parentNodeNext.deinit();
+				parentNode.next = null;
 			}
-			depth -= 1;
-		}
 
+			index -= 1;
+		}
+		
 		return true;
+	}
+
+
+	/// Iterates to the end of the string provided, and returns a stack of the nodes visited, allocated with alloc param
+	fn iterateToRetainStack(self: *@This(), str: []const u8, alloc: std.mem.Allocator) !?std.ArrayList(*Node) {
+		var lastNode = &self.rootNode;
+		var stack = try std.ArrayList(*Node).initCapacity(alloc, 15);
+		errdefer stack.deinit(alloc);
+		stack.appendAssumeCapacity(lastNode);
+
+		for (str) |char| {
+			lastNode = lastNode.next.?.get(char) orelse return null;
+			try stack.append(alloc, lastNode);
+		}
+
+		return stack;
 	}
 
 

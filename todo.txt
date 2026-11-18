@@ -1,6 +1,3 @@
-fix delete in trie
-when listing trie after deletion the pointer becomes invalid data
-
 convert trie to radix tree
 
 make config generator title case
